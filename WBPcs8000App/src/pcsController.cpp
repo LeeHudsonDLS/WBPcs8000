@@ -21,6 +21,7 @@ pcsController ::pcsController(const char *portName, const char *lowLevelPortName
 
 }
 
+pcsController::~pcsController() {}
 
 asynStatus pcsController::writeFloat64(asynUser *pasynUser, epicsFloat64 value) {
     printf("writeFloat64 called\n");
