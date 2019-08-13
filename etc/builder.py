@@ -15,10 +15,11 @@ class pcsController(Device):
 
 
     # Constructor, just store parameters
-    def __init__(self, PORT, ASYN_PORT, ASYN_ADDRESS=0, NUM_AXES=2, POLLMOVING=200,POLLNOTMOVING=200, **args):
+    def __init__(self, PORT,  ASYN_PORT, name = None, ASYN_ADDRESS=0, NUM_AXES=2, POLLMOVING=200,POLLNOTMOVING=200, **args):
         Device.__init__(self)
         self.PORT = PORT
         self.ASYN_PORT = ASYN_PORT
+        self.name = name
         self.ASYN_ADDRESS = ASYN_ADDRESS
         self.NUM_AXES = NUM_AXES
         self.POLLMOVING = POLLMOVING
@@ -34,6 +35,7 @@ class pcsController(Device):
     ArgInfo = makeArgInfo(__init__,
         PORT = Simple("Asyn port name", str),
         ASYN_PORT = Ident("Asyn IP port name", AsynPort),
+        name = Simple("Controller name", str),
         ASYN_ADDRESS = Simple("Asyn IP port address", int),
         NUM_AXES = Simple("Number of axes", int),
         POLLMOVING = Simple("Poll period (ms) while moving", int),
@@ -59,9 +61,9 @@ class pcsAxis(Device):
     def Initialise(self):
         print "# Configure Walter and Bai PCS8000 Axis"
         print "# pcsAxisConfig(%(CONTROLLER)s, %(AXIS_NO)d)"
-        print "pcsControllerConfig(%(CONTROLLER)s, %(AXIS_NO)d)" % self.__dict__
+        print "pcsAxisConfig(%(CONTROLLER)s, %(AXIS_NO)d)" % self.__dict__
 
     # Arguments
     ArgInfo = makeArgInfo(__init__,
-                          CONTROLLER = Ident("Asyn port name", pcsController),
+                          CONTROLLER = Simple("Controller name", str),
                           AXIS_NO = Simple("Axis number", int))
