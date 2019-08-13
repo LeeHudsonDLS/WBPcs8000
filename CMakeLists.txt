@@ -22,13 +22,17 @@ include_directories(
 
 set(WBPCS8000_SOURCE_FILES
     WBPcs8000App/src/WBPcs8000Main.cpp
-    WBPcs8000App/src/O.linux-x86_64/WBPcs8000_registerRecordDeviceDriver.cpp
-    WBPcs8000App/src/O.vxWorks-ppc604_long/WBPcs8000_registerRecordDeviceDriver.cpp
-    WBPcs8000App/src/O.vxWorks-ppc604_long/WBPcs8000_ctdt.c
+    WBPcs8000App/src/pcsController.cpp
+    WBPcs8000App/src/pcsController.h
+    WBPcs8000App/src/pcsAxis.cpp
+    WBPcs8000App/src/pcsAxis.h
     etc/makeIocs/O.Common/example/exampleApp/src/exampleMain.cpp
     etc/makeIocs/O.Common/example_sim/exampleApp/src/exampleMain.cpp
     iocs/example/exampleApp/src/exampleMain.cpp
     iocs/example_sim/exampleApp/src/exampleMain.cpp
+    cmake-build-debug/CMakeFiles/feature_tests.c
+    cmake-build-debug/CMakeFiles/3.14.5/CompilerIdC/CMakeCCompilerId.c
+    cmake-build-debug/CMakeFiles/3.14.5/CompilerIdCXX/CMakeCXXCompilerId.cpp
 )
 
 add_library(WBPcs8000_source ${WBPCS8000_SOURCE_FILES})

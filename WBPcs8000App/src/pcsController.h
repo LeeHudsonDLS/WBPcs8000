@@ -7,7 +7,9 @@
 
 #include <epicsTypes.h>
 #include <epicsThread.h>
-#include <asynMotorController.h>
+#include "asynMotorController.h"
+#include "asynMotorAxis.h"
+#include "pcsAxis.h"
 #include <vector>
 
 class pcsController
@@ -19,7 +21,6 @@ public:
     virtual  ~pcsController();
 
 // These are the methods that we override from asynMotorController
-public:
     virtual asynStatus writeInt32(asynUser *pasynUser, epicsInt32 value);
     virtual asynStatus writeFloat64(asynUser *pasynUser, epicsFloat64 value);
     virtual asynStatus writeOctet(asynUser *pasynUser, const char *value,
@@ -27,6 +28,10 @@ public:
     virtual asynStatus poll();
     enum OperatingMode {MotorRecord=0, Jog=1};
     enum JogOperation {Stop=0, Forward=1, Reverse=2};
+private:
+
+    friend class pcsAxis;
+
 };
 
 #endif //PCSCONTROLLER_H
