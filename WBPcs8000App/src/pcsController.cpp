@@ -18,7 +18,8 @@ pcsController::pcsController(const char *portName, const char *lowLevelPortName,
 {
 
     printf("pcsController created");
-
+    pAxes_ = (pcsAxis **) (asynMotorController::pAxes_);
+    createAsynParams();
 }
 
 pcsController::~pcsController() {}
@@ -37,7 +38,12 @@ asynStatus pcsController::poll() {
     printf("poll called\n");
 }
 
+void pcsController::createAsynParams(void){
+  int index = 0;
 
+  createParam(PCS_C_FirstParamString,asynParamInt32,&PCS_C_FirstParam);
+
+}
 
 
 /** Configuration command, called directly or from iocsh.

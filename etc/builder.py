@@ -39,3 +39,29 @@ class pcsController(Device):
         POLLMOVING = Simple("Poll period (ms) while moving", int),
         POLLNOTMOVING = Simple("Poll period (ms) while not moving", int))
 
+class pcsAxis(Device):
+    """Defines the device configuration"""
+
+    Dependencies = (Asyn, MotorLib)
+
+    # Libraries
+    #LibFileList = ['WBPcs8000']
+    #DbdFileList = ['WBPcs8000']
+
+
+    # Constructor, just store parameters
+    def __init__(self, CONTROLLER, AXIS_NO, **args):
+        Device.__init__(self)
+        self.CONTROLLER = CONTROLLER
+        self.AXIS_NO = AXIS_NO
+
+    # Once per instantiation
+    def Initialise(self):
+        print "# Configure Walter and Bai PCS8000 Axis"
+        print "# pcsAxisConfig(%(CONTROLLER)s, %(AXIS_NO)d)"
+        print "pcsControllerConfig(%(CONTROLLER)s, %(AXIS_NO)d)" % self.__dict__
+
+    # Arguments
+    ArgInfo = makeArgInfo(__init__,
+                          CONTROLLER = Ident("Asyn port name", pcsController),
+                          AXIS_NO = Simple("Axis number", int))

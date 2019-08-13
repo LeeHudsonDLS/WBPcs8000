@@ -12,5 +12,6 @@ DBD += WBPcs8000.dbd
 WBPcs8000_DBD += Pcs.dbd
 
 WBPcs8000_SRCS += pcsController.c
+WBPcs8000_SRCS += pcsAxis.c
 
 include $(TOP)/configure/RULES
