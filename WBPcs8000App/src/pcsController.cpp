@@ -17,9 +17,9 @@ pcsController::pcsController(const char *portName, const char *lowLevelPortName,
                               0, 50000)
 {
 
-    printf("pcsController created");
-    pAxes_ = (pcsAxis **) (asynMotorController::pAxes_);
+    static const char *functionName = "pcsController::pcsController";
     createAsynParams();
+    startPoller(movingPollPeriod, idlePollPeriod, 2);
 }
 
 pcsController::~pcsController() {}
@@ -80,22 +80,21 @@ void pcsController::createAsynParams(void){
 
 }
 
-
-pcsAxis *pcsController::getAxis(asynUser *pasynUser) {
-    int axisNo = 0;
-
-    getAddress(pasynUser, &axisNo);
-    return getAxis(axisNo);
+/** Returns a pointer to an MCB4BAxis object.
+  * Returns NULL if the axis number encoded in pasynUser is invalid.
+  * \param[in] pasynUser asynUser structure that encodes the axis index number. */
+pcsAxis* pcsController::getAxis(asynUser *pasynUser)
+{
+    return static_cast<pcsAxis*>(asynMotorController::getAxis(pasynUser));
 }
 
-pcsAxis *pcsController::getAxis(int axisNo) {
-    if((axisNo < 1) || (axisNo > numAxes_)){
-        return NULL;
-    }else{
-        return pAxes_[axisNo];
-    }
+/** Returns a pointer to an MCB4BAxis object.
+  * Returns NULL if the axis number encoded in pasynUser is invalid.
+  * \param[in] axisNo Axis index number. */
+pcsAxis* pcsController::getAxis(int axisNo)
+{
+    return static_cast<pcsAxis*>(asynMotorController::getAxis(axisNo));
 }
-
 
 
 

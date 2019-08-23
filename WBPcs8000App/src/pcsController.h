@@ -35,7 +35,7 @@ public:
     pcsAxis *getAxis(asynUser *pasynUser);
     pcsAxis *getAxis(int axisNo);
 protected:
-    pcsAxis **pAxes_;    /**< Array of pointers to axis objects */
+    //pcsAxis **pAxes_;    /**< Array of pointers to axis objects */
 
     int PCS_C_FirstParam;
 
