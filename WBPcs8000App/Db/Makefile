@@ -18,7 +18,7 @@ include $(TOP)/configure/CONFIG
 # In a Diamond IOC Application, build db files from
 # template files like this
 #
-#DB += BL06I-MO-IOC-01.db
+DB += dls_pcs_asyn_motor.db
 #DB += BL06I-MO-IOC-01_sim.db
 
 #USES_TEMPLATE += $(MOTOR)/db/motor.template

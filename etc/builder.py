@@ -2,7 +2,9 @@ from iocbuilder import AutoSubstitution
 from iocbuilder import Device
 from iocbuilder.arginfo import *
 from iocbuilder.modules.asyn import Asyn, AsynPort
-from iocbuilder.modules.motor import MotorLib
+from iocbuilder.modules.motor import MotorLib, MotorRecord
+from iocbuilder.modules.calc import Calc
+from iocbuilder.modules.busy import Busy
 
 class pcsController(Device):
     """Defines the device configuration"""
@@ -67,3 +69,11 @@ class pcsAxis(Device):
     ArgInfo = makeArgInfo(__init__,
                           CONTROLLER = Simple("Controller name", str),
                           AXIS_NO = Simple("Axis number", int))
+
+class dls_pcs_asyn_motor(AutoSubstitution, MotorRecord):
+    WarnMacros = False
+    TemplateFile = 'dls_pcs_asyn_motor.db'
+    Dependencies = (Busy, Calc)
+    def __init__(self, **kwargs):
+        # Pass down the common parameters
+        self.__super.__init__(**kwargs)

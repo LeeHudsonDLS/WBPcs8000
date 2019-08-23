@@ -25,9 +25,44 @@ pcsController::pcsController(const char *portName, const char *lowLevelPortName,
 pcsController::~pcsController() {}
 
 asynStatus pcsController::writeFloat64(asynUser *pasynUser, epicsFloat64 value) {
-    printf("writeFloat64 called\n");
+    int function = pasynUser->reason;
+    const char *name[128];
+    bool status = true;
+    pcsAxis *pAxis = NULL;
+
+    getParamName(function, name);
+    pAxis = this->getAxis(pasynUser);
+    if (!pAxis) {
+        return asynError;
+    }
+    printf("Axis number is :%d\n",pAxis->axisNo_);
+
+    printf("writeFloat64 called with function : %s\n",*name);
+    if (function == motorPosition_) printf("motorPosition_\n");
+    if (function == motorLowLimit_) printf("motorLowLimit_\n");
+    if (function == motorHighLimit_) printf("motorHighLimit_\n");
+
+    /* Set the parameter and readback in the parameter library. */
+    status = (pAxis->setDoubleParam(function, value) == asynSuccess) && status;
+
+    /* Call base class for anything missed in this controller implementation*/
+    status = (asynMotorController::writeFloat64(pasynUser, value) == asynSuccess) && status;
+
 }
 asynStatus pcsController::writeInt32(asynUser *pasynUser, epicsInt32 value) {
+
+    int function = pasynUser->reason;
+    const char *name[128];
+    bool status = true;
+    pcsAxis *pAxis = NULL;
+
+    getParamName(function, name);
+    pAxis = this->getAxis(pasynUser);
+    if (!pAxis) {
+        return asynError;
+    }
+
+    status = (pAxis->setIntegerParam(function, value) == asynSuccess) && status;
     printf("writeInt32 called\n");
 }
 
@@ -44,6 +79,32 @@ void pcsController::createAsynParams(void){
   createParam(PCS_C_FirstParamString,asynParamInt32,&PCS_C_FirstParam);
 
 }
+
+
+pcsAxis *pcsController::getAxis(asynUser *pasynUser) {
+    int axisNo = 0;
+
+    getAddress(pasynUser, &axisNo);
+    return getAxis(axisNo);
+}
+
+pcsAxis *pcsController::getAxis(int axisNo) {
+    if((axisNo < 1) || (axisNo > numAxes_)){
+        return NULL;
+    }else{
+        return pAxes_[axisNo];
+    }
+}
+
+
+
+
+
+
+
+
+
+
 
 
 /** Configuration command, called directly or from iocsh.
@@ -71,27 +132,6 @@ extern "C" int pcsControllerConfig(const char *portName, const char *lowLevelPor
     return result;
 }
 
-/** Axis configuration command, called directly or from iocsh.
-  * \param[in] portName The name of the controller asyn port.
-  * \param[in] axisNum The number of the axis, zero based.
-  * \param[in] homeMode The homing mode of the axis
-  */
-extern "C" int pcsAxisConfig(const char *controllerName, int axisNum)
-{
-    int result = asynSuccess;
-    pcsController* controller = (pcsController*)findAsynPortDriver(controllerName);
-    if(controller == NULL)
-    {
-        printf("Could not find a GCS controller with this port name\n");
-        result = asynError;
-    }
-    else
-    {
-        new pcsAxis(controller, axisNum);
-    }
-    return result;
-}
-
 /* Code for iocsh registration for pcsController*/
 static const iocshArg pcsControllerConfigArg0 = {"Port name", iocshArgString};
 static const iocshArg pcsControllerConfigArg1 = {"Low level port name", iocshArgString};
@@ -113,36 +153,10 @@ static void configPcsControllerCallFunc(const iocshArgBuf *args)
         args[4].ival, args[5].ival);
 }
 
-
-
-
-/* Code for iocsh registration for pcsAxis*/
-/*
- * Following parameters required for asynMotorController constructor:
- * name of associated asynMotorController char*
- * axis number int
- */
-
-static const iocshArg pcsAxisConfigArg0 = {"Controller port name", iocshArgString};
-static const iocshArg pcsAxisConfigArg1 = {"Axis number", iocshArgInt};
-
-static const iocshArg *const pcsAxisConfigArgs[] = {&pcsAxisConfigArg0,
-                                                     &pcsAxisConfigArg1};
-
-static const iocshFuncDef configPcsAxis =
-    {"pcsAxisConfig", 2, pcsAxisConfigArgs};
-
-static void configPcsAxisCallFunc(const iocshArgBuf *args)
-{
-    pcsAxisConfig(args[0].sval, args[1].ival);
-}
-
-
-static void PcsRegister(void)
+static void PcsControllerRegister(void)
 {
     iocshRegister(&configPcsController, configPcsControllerCallFunc);
-    iocshRegister(&configPcsAxis, configPcsAxisCallFunc);
 }
 
 
-extern "C" { epicsExportRegistrar(PcsRegister); }
+extern "C" { epicsExportRegistrar(PcsControllerRegister); }

@@ -1,2 +1,3 @@
 
-registrar("PcsRegister")
+registrar("PcsControllerRegister")
+registrar("PcsAxisRegister")

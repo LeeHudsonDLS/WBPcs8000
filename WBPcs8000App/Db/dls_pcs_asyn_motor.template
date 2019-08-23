@@ -1,0 +1,2 @@
+# include motor record from the motor module
+include "basic_asyn_motor.template"

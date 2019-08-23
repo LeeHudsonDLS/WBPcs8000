@@ -32,6 +32,8 @@ public:
     enum OperatingMode {MotorRecord=0, Jog=1};
     enum JogOperation {Stop=0, Forward=1, Reverse=2};
     void createAsynParams(void);
+    pcsAxis *getAxis(asynUser *pasynUser);
+    pcsAxis *getAxis(int axisNo);
 protected:
     pcsAxis **pAxes_;    /**< Array of pointers to axis objects */
 
