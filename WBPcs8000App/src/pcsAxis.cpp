@@ -19,11 +19,21 @@ pcsAxis::pcsAxis(pcsController *ctrl, int axisNo)
     static const char *functionName = "pcsAxis::pcsAxis";
     asynPrint(ctrl_->pasynUserSelf, ASYN_TRACE_FLOW, "%s\n",functionName);
 
+    pmacHeader[0] = '\x8B';
+    pmacHeader[1] = '\x40';
+    pmacHeader[2] = '\xBF';
+    pmacHeader[3] = '\x00';
+    pmacHeader[4] = '\x00';
+    pmacHeader[5] = '\x00';
+    pmacHeader[6] = '\x00';
+    pmacHeader[7] = '\x00';
     //Initialize non-static data members
     velocity_ = 0.0;
     accel_ = 0.0;
 
     initialise(axisNo_);
+
+    asynStatus status = ctrl_->writeReadController();
 
 }
 
@@ -68,9 +78,24 @@ asynStatus pcsAxis::setPosition(double position){
     return asynSuccess;
 }
 
+asynStatus pcsAxis::poll(bool *moving) {
+    sprintf(ctrl_->outString_,"%s%c#1p\n",pmacHeader,'\x03');
+    printf("Output : %s\n",ctrl_->outString_);
+    ctrl_->writeReadController();
+    printf("inString%s\n",ctrl_->inString_);
+
+}
+
 pcsAxis::~pcsAxis(){
 
 }
+
+
+
+
+
+
+
 
 /** Axis configuration command, called directly or from iocsh.
   * \param[in] portName The name of the controller asyn port.
