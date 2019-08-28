@@ -8,7 +8,6 @@
 #include "asynMotorAxis.h"
 #include <string>
 
-
 class pcsController;
 
 class pcsAxis : public asynMotorAxis{
@@ -26,10 +25,11 @@ class pcsAxis : public asynMotorAxis{
             double maxVelocity, double acceleration, int forwards);
     virtual asynStatus stop(double acceleration);
     virtual asynStatus setPosition(double position);
-
+    virtual asynStatus poll(bool *moving);
 private:
     /* Data */
     pcsController *ctrl_;
+    signed char pmacHeader[8];
     double velocity_ ;
     double accel_;
     friend class pcsController;
