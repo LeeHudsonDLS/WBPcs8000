@@ -17,29 +17,22 @@ pcsAxis::pcsAxis(pcsController *ctrl, int axisNo)
         ctrl_(ctrl){
 
     static const char *functionName = "pcsAxis::pcsAxis";
-    asynPrint(ctrl_->pasynUserSelf, ASYN_TRACE_FLOW, "%s\n",functionName);
+    asynPrint(ctrl_->pasynUserSelf, ASYN_TRACE_FLOW, "%s\r",functionName);
 
-    pmacHeader[0] = '\x8B';
-    pmacHeader[1] = '\x40';
-    pmacHeader[2] = '\xBF';
-    pmacHeader[3] = '\x00';
-    pmacHeader[4] = '\x00';
-    pmacHeader[5] = '\x00';
-    pmacHeader[6] = '\x00';
-    pmacHeader[7] = '\x00';
     //Initialize non-static data members
     velocity_ = 0.0;
     accel_ = 0.0;
 
     initialise(axisNo_);
 
-    asynStatus status = ctrl_->writeReadController();
+    //asynStatus status = ctrl_->writeReadController();
 
 }
 
 void pcsAxis::initialise(int axisNo) {
     static const char *functionName = "pcsAxis::initialise";
     printf("Axis %d created \n",axisNo);
+    // setIntegerParam(ctrl_->motorStatusMoving_, false);
 }
 
 
@@ -49,16 +42,15 @@ asynStatus pcsAxis::move(double position, int relative, double minVelocity, doub
     asynStatus status = asynError;
     static const char *functionName = "move";
 
-    char commandBuffer[255] = {0};
-
     printf("pcsAxis::move() called\n");
 
     asynPrint(ctrl_->pasynUserSelf, ASYN_TRACE_FLOW, "%s\n", functionName);
 
-    setIntegerParam(ctrl_->motorStatusMoving_, true);
-    sprintf(commandBuffer, "#%dj=%f\n ", axisNo_, position);
-    printf(commandBuffer);
+    sprintf(ctrl_->outString_, "#%dj=%f\n\r ", axisNo_, position);
+    ctrl_->writeController();
 
+    // setIntegerParam(ctrl_->motorStatusMoving_, false);
+    // ctrl_->wakeupPoller();
     return asynSuccess;
 }
 asynStatus pcsAxis::moveVelocity(double minVelocity,double maxVelocity, double acceleration){
@@ -79,10 +71,22 @@ asynStatus pcsAxis::setPosition(double position){
 }
 
 asynStatus pcsAxis::poll(bool *moving) {
-    sprintf(ctrl_->outString_,"%s%c#1p\n",pmacHeader,'\x03');
-    printf("Output : %s\n",ctrl_->outString_);
+/*
+    sprintf(ctrl_->outString_, "#%dj=%f\n\r ", axisNo_, 13.000000);
     ctrl_->writeReadController();
-    printf("inString%s\n",ctrl_->inString_);
+    setDoubleParam(ctrl_->motorPosition_,12);
+    callParamCallbacks();
+*/
+
+
+    sprintf(ctrl_->outString_,"#%dp\r",axisNo_);
+    ctrl_->writeReadController();
+    setIntegerParam(ctrl_->motorStatusDone_,1);
+    setDoubleParam(ctrl_->motorPosition_,atoi(ctrl_->inString_));
+    *moving = false;
+    printf("Polling\n");
+    callParamCallbacks();
+    return asynSuccess;
 
 }
 

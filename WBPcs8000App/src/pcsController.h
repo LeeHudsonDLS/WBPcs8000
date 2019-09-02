@@ -13,7 +13,7 @@
 #include <vector>
 
 #define PCS_C_FirstParamString           "PCS_C_FIRSTPARAM"
-
+#define NUM_OF_PCS_PARAMS   1
 
 class pcsController
         : public asynMotorController {
@@ -21,9 +21,9 @@ public:
     pcsController(const char *portName, const char *lowLevelPortName, int lowLevelPortAddress,
                   int numAxes, double movingPollPeriod,
                   double idlePollPeriod);
-    virtual  ~pcsController();
+    ~pcsController();
 
-    virtual asynStatus poll();
+    asynStatus poll();
     enum OperatingMode {MotorRecord=0, Jog=1};
     enum JogOperation {Stop=0, Forward=1, Reverse=2};
     void createAsynParams(void);

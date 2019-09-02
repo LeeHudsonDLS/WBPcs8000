@@ -9,12 +9,13 @@
 
 pcsController::pcsController(const char *portName, const char *lowLevelPortName, int lowLevelPortAddress, int numAxes,
                               double movingPollPeriod, double idlePollPeriod)
-    : asynMotorController(portName, numAxes + 1, NUM_MOTOR_DRIVER_PARAMS +50,
-                              asynEnumMask | asynInt32ArrayMask, // For user mode and velocity mode
-                              asynEnumMask, // No addition interrupt interfaces
+    : asynMotorController(portName, numAxes + 1, NUM_MOTOR_DRIVER_PARAMS + NUM_OF_PCS_PARAMS,
+                              0,
+                              0,
                               ASYN_CANBLOCK | ASYN_MULTIDEVICE,
                               1, // autoconnect
-                              0, 50000)
+                              0,
+                              0)
 {
     asynStatus status;
     static const char *functionName = "pcsController::pcsController";
@@ -32,8 +33,11 @@ pcsController::pcsController(const char *portName, const char *lowLevelPortName,
 pcsController::~pcsController() {}
 
 
+
 asynStatus pcsController::poll() {
-    printf("poll called\n");
+
+    return asynSuccess;
+
 }
 
 void pcsController::createAsynParams(void){
