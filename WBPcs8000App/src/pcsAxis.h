@@ -7,6 +7,10 @@
 #include "asynMotorController.h"
 #include "asynMotorAxis.h"
 #include <string>
+#include <vector>
+#include <stdio.h>
+#include <bits/stdc++.h>
+#include "XmlCommandConstructor.h"
 
 
 class pcsController;
@@ -30,6 +34,7 @@ class pcsAxis : public asynMotorAxis{
 private:
     /* Data */
     pcsController *ctrl_;
+    XmlCommandConstructor commandConstructor;
     double velocity_ ;
     double accel_;
     friend class pcsController;

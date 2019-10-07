@@ -10,6 +10,7 @@ set(CALC "${SUPPORT}/calc/3-7")
 set(MOTOR "${SUPPORT}/motor/7-0dls1")
 set(BUSY "${SUPPORT}/busy/1-7dls1")
 
+
 include_directories(
     ${TEMPLATE_TOP}/include
     ${EPICS_BASE}/include
@@ -18,18 +19,19 @@ include_directories(
     ${CALC}/include
     ${MOTOR}/include
     ${BUSY}/include
-    ${EPICS_BASE}/include/os/Linux)
+    ${EPICS_BASE}/include/os/Linux
+    /usr/include/libxml2)
 
 set(WBPCS8000_SOURCE_FILES
     WBPcs8000App/src/WBPcs8000Main.cpp
+    WBPcs8000App/src/pcsAxis.cpp
     WBPcs8000App/src/pcsController.cpp
     WBPcs8000App/src/pcsController.h
-    WBPcs8000App/src/pcsAxis.cpp
     WBPcs8000App/src/pcsAxis.h
-    etc/makeIocs/O.Common/example/exampleApp/src/exampleMain.cpp
-    etc/makeIocs/O.Common/example_sim/exampleApp/src/exampleMain.cpp
-    iocs/example/exampleApp/src/exampleMain.cpp
-    iocs/example_sim/exampleApp/src/exampleMain.cpp
+    WBPcs8000App/src/XmlCommandConstructor.cpp
+    WBPcs8000App/src/XmlCommandConstructor.h
+    WBPcs8000App/src/Sequencer.cpp
+    WBPcs8000App/src/Sequencer.h
     cmake-build-debug/CMakeFiles/feature_tests.c
     cmake-build-debug/CMakeFiles/3.14.5/CompilerIdC/CMakeCCompilerId.c
     cmake-build-debug/CMakeFiles/3.14.5/CompilerIdCXX/CMakeCXXCompilerId.cpp

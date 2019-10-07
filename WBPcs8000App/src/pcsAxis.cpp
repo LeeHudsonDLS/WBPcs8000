@@ -10,6 +10,8 @@
 #include <iostream>
 #include <iocsh.h>
 #include <epicsExport.h>
+#include <algorithm>
+#include <stdlib.h>
 
 #include <epicsExport.h>
 pcsAxis::pcsAxis(pcsController *ctrl, int axisNo)
@@ -30,6 +32,27 @@ pcsAxis::pcsAxis(pcsController *ctrl, int axisNo)
 void pcsAxis::initialise(int axisNo) {
     static const char *functionName = "pcsAxis::initialise";
     printf("Axis %d created \n",axisNo);
+<<<<<<< Updated upstream
+=======
+
+
+    /*
+     * Set up UDP streaming
+     */
+    XmlCommandConstructor udpSetup;
+    udpSetup.addCSV("maincontrol,set,sys_state,Ready");
+    udpSetup.addCSV("udpxmit,clear,,");
+    udpSetup.addCSV("udpxmit,register,stream,phys14");
+    udpSetup.addCSV("udpxmit,register,stream,phys1");
+    udpSetup.addCSV("eventcom,start,,");
+
+    printf("Initialise called\n%s\n",udpSetup.getXml().c_str());
+    // Send the xml
+    //sprintf(ctrl_->outString_, "%s",udpSetup.getXml().c_str());
+    //ctrl_->writeController();
+
+
+>>>>>>> Stashed changes
 }
 
 
@@ -68,6 +91,28 @@ asynStatus pcsAxis::setPosition(double position){
     return asynSuccess;
 }
 
+<<<<<<< Updated upstream
+=======
+asynStatus pcsAxis::poll(bool *moving) {
+/*
+    sprintf(ctrl_->outString_, "#%dj=%f\n\r ", axisNo_, 13.000000);
+    ctrl_->writeReadController();
+    setDoubleParam(ctrl_->motorPosition_,12);
+    callParamCallbacks();
+*/
+
+
+    sprintf(ctrl_->outString_,"#%dp\r",axisNo_);
+    ctrl_->writeReadController();
+    setIntegerParam(ctrl_->motorStatusDone_,1);
+    setDoubleParam(ctrl_->motorPosition_,atoi(ctrl_->inString_));
+    *moving = false;
+    callParamCallbacks();
+    return asynSuccess;
+
+}
+
+>>>>>>> Stashed changes
 pcsAxis::~pcsAxis(){
 
 }
