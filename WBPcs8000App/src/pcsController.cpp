@@ -9,68 +9,35 @@
 
 pcsController::pcsController(const char *portName, const char *lowLevelPortName, int lowLevelPortAddress, int numAxes,
                               double movingPollPeriod, double idlePollPeriod)
-    : asynMotorController(portName, numAxes + 1, NUM_MOTOR_DRIVER_PARAMS +50,
-                              asynEnumMask | asynInt32ArrayMask, // For user mode and velocity mode
-                              asynEnumMask, // No addition interrupt interfaces
+    : asynMotorController(portName, numAxes + 1, NUM_MOTOR_DRIVER_PARAMS + NUM_OF_PCS_PARAMS,
+                              0,
+                              0,
                               ASYN_CANBLOCK | ASYN_MULTIDEVICE,
                               1, // autoconnect
-                              0, 50000)
+                              0,
+                              0)
 {
-
+    asynStatus status;
     static const char *functionName = "pcsController::pcsController";
     createAsynParams();
+
+    /* Connect to pcsController controller */
+    status = pasynOctetSyncIO->connect(lowLevelPortName, 0, &pasynUserController_, NULL);
+    if (status) {
+        asynPrint(this->pasynUserSelf, ASYN_TRACE_ERROR,
+      "%s: cannot connect to pcs controller\n",functionName);
+    }
     startPoller(movingPollPeriod, idlePollPeriod, 2);
 }
 
 pcsController::~pcsController() {}
 
-asynStatus pcsController::writeFloat64(asynUser *pasynUser, epicsFloat64 value) {
-    int function = pasynUser->reason;
-    const char *name[128];
-    bool status = true;
-    pcsAxis *pAxis = NULL;
 
-    getParamName(function, name);
-    pAxis = this->getAxis(pasynUser);
-    if (!pAxis) {
-        return asynError;
-    }
-    printf("Axis number is :%d\n",pAxis->axisNo_);
 
-    printf("writeFloat64 called with function : %s\n",*name);
-    if (function == motorPosition_) printf("motorPosition_\n");
-    if (function == motorLowLimit_) printf("motorLowLimit_\n");
-    if (function == motorHighLimit_) printf("motorHighLimit_\n");
-
-    /* Set the parameter and readback in the parameter library. */
-    status = (pAxis->setDoubleParam(function, value) == asynSuccess) && status;
-
-    /* Call base class for anything missed in this controller implementation*/
-    status = (asynMotorController::writeFloat64(pasynUser, value) == asynSuccess) && status;
-
-}
-asynStatus pcsController::writeInt32(asynUser *pasynUser, epicsInt32 value) {
-
-    int function = pasynUser->reason;
-    const char *name[128];
-    bool status = true;
-    pcsAxis *pAxis = NULL;
-
-    getParamName(function, name);
-    pAxis = this->getAxis(pasynUser);
-    if (!pAxis) {
-        return asynError;
-    }
-
-    status = (pAxis->setIntegerParam(function, value) == asynSuccess) && status;
-    printf("writeInt32 called\n");
-}
-
-asynStatus pcsController::writeOctet(asynUser *pasynUser, const char *value, size_t maxChars, size_t *nActual) {
-    printf("writeOctet called\n");
-}
 asynStatus pcsController::poll() {
-    printf("poll called\n");
+
+    return asynSuccess;
+
 }
 
 void pcsController::createAsynParams(void){
@@ -95,15 +62,6 @@ pcsAxis* pcsController::getAxis(int axisNo)
 {
     return static_cast<pcsAxis*>(asynMotorController::getAxis(axisNo));
 }
-
-
-
-
-
-
-
-
-
 
 
 /** Configuration command, called directly or from iocsh.

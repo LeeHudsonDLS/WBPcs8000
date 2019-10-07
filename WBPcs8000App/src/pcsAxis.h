@@ -12,25 +12,24 @@
 #include <bits/stdc++.h>
 #include "XmlCommandConstructor.h"
 
-
 class pcsController;
 
 class pcsAxis : public asynMotorAxis{
     public:
     pcsAxis(pcsController *ctrl, int axisNo);
-    virtual ~pcsAxis();
+    ~pcsAxis();
     void initialise(int axisNo);
 
     // Overridden from asynMotorAxis
-    virtual asynStatus move(double position, int relative,
+    asynStatus move(double position, int relative,
             double minVelocity, double maxVelocity, double acceleration);
-    virtual asynStatus moveVelocity(double minVelocity,
+    asynStatus moveVelocity(double minVelocity,
             double maxVelocity, double acceleration);
-    virtual asynStatus home(double minVelocity,
+    asynStatus home(double minVelocity,
             double maxVelocity, double acceleration, int forwards);
-    virtual asynStatus stop(double acceleration);
-    virtual asynStatus setPosition(double position);
-
+    asynStatus stop(double acceleration);
+    asynStatus setPosition(double position);
+    asynStatus poll(bool *moving);
 private:
     /* Data */
     pcsController *ctrl_;

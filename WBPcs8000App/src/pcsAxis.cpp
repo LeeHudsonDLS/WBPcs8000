@@ -19,7 +19,7 @@ pcsAxis::pcsAxis(pcsController *ctrl, int axisNo)
         ctrl_(ctrl){
 
     static const char *functionName = "pcsAxis::pcsAxis";
-    asynPrint(ctrl_->pasynUserSelf, ASYN_TRACE_FLOW, "%s\n",functionName);
+    asynPrint(ctrl_->pasynUserSelf, ASYN_TRACE_FLOW, "%s\r",functionName);
 
     //Initialize non-static data members
     velocity_ = 0.0;
@@ -27,13 +27,13 @@ pcsAxis::pcsAxis(pcsController *ctrl, int axisNo)
 
     initialise(axisNo_);
 
+    //asynStatus status = ctrl_->writeReadController();
+
 }
 
 void pcsAxis::initialise(int axisNo) {
     static const char *functionName = "pcsAxis::initialise";
     printf("Axis %d created \n",axisNo);
-<<<<<<< Updated upstream
-=======
 
 
     /*
@@ -51,8 +51,6 @@ void pcsAxis::initialise(int axisNo) {
     //sprintf(ctrl_->outString_, "%s",udpSetup.getXml().c_str());
     //ctrl_->writeController();
 
-
->>>>>>> Stashed changes
 }
 
 
@@ -62,16 +60,15 @@ asynStatus pcsAxis::move(double position, int relative, double minVelocity, doub
     asynStatus status = asynError;
     static const char *functionName = "move";
 
-    char commandBuffer[255] = {0};
-
     printf("pcsAxis::move() called\n");
 
     asynPrint(ctrl_->pasynUserSelf, ASYN_TRACE_FLOW, "%s\n", functionName);
 
-    setIntegerParam(ctrl_->motorStatusMoving_, true);
-    sprintf(commandBuffer, "#%dj=%f\n ", axisNo_, position);
-    printf(commandBuffer);
+    sprintf(ctrl_->outString_, "#%dj=%f\n\r ", axisNo_, position);
+    ctrl_->writeController();
 
+    // setIntegerParam(ctrl_->motorStatusMoving_, false);
+    // ctrl_->wakeupPoller();
     return asynSuccess;
 }
 asynStatus pcsAxis::moveVelocity(double minVelocity,double maxVelocity, double acceleration){
@@ -91,8 +88,6 @@ asynStatus pcsAxis::setPosition(double position){
     return asynSuccess;
 }
 
-<<<<<<< Updated upstream
-=======
 asynStatus pcsAxis::poll(bool *moving) {
 /*
     sprintf(ctrl_->outString_, "#%dj=%f\n\r ", axisNo_, 13.000000);
@@ -112,10 +107,16 @@ asynStatus pcsAxis::poll(bool *moving) {
 
 }
 
->>>>>>> Stashed changes
 pcsAxis::~pcsAxis(){
 
 }
+
+
+
+
+
+
+
 
 /** Axis configuration command, called directly or from iocsh.
   * \param[in] portName The name of the controller asyn port.
