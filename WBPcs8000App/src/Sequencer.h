@@ -1,9 +1,12 @@
 //
 // Created by jjc62351 on 07/10/2019.
 //
-
-#include "XmlCommandConstructor.h"
-#include <libxml/xmlreader.h>
+#include <iostream>
+#include <string>
+#include <cstring>
+#include <vector>
+#include <stdio.h>
+#include <sstream>
 #include <libxml/parser.h>
 #include <libxml/xpath.h>
 

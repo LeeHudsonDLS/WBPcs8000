@@ -16,7 +16,8 @@
 #include <epicsExport.h>
 pcsAxis::pcsAxis(pcsController *ctrl, int axisNo)
         :asynMotorAxis((asynMotorController *) ctrl, axisNo),
-        ctrl_(ctrl){
+        ctrl_(ctrl),
+        relativeMoveSequencer("relativeMoveTemplate.xml"){
 
     static const char *functionName = "pcsAxis::pcsAxis";
     asynPrint(ctrl_->pasynUserSelf, ASYN_TRACE_FLOW, "%s\r",functionName);
@@ -24,7 +25,6 @@ pcsAxis::pcsAxis(pcsController *ctrl, int axisNo)
     //Initialize non-static data members
     velocity_ = 0.0;
     accel_ = 0.0;
-
     initialise(axisNo_);
 
     //asynStatus status = ctrl_->writeReadController();

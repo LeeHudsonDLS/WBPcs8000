@@ -9,8 +9,8 @@
 #include <string>
 #include <vector>
 #include <stdio.h>
-#include <bits/stdc++.h>
 #include "XmlCommandConstructor.h"
+#include "Sequencer.h"
 
 class pcsController;
 
@@ -34,6 +34,7 @@ private:
     /* Data */
     pcsController *ctrl_;
     XmlCommandConstructor commandConstructor;
+    Sequencer relativeMoveSequencer;
     double velocity_ ;
     double accel_;
     friend class pcsController;

@@ -10,6 +10,8 @@ Sequencer::Sequencer(std::string xmlTemplateFile) {
 	if (pDoc == NULL ) {
 		printf("Document not parsed successfully. \n");
 		//Some error handling
+	}else{
+		printf("%s parsed successfully. \n",xmlTemplateFile.c_str());
 	}
 
 }
