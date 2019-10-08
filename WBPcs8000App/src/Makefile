@@ -19,4 +19,6 @@ WBPcs8000_SRCS += XmlCommandConstructor.cpp
 WBPcs8000_SRCS += Sequencer.cpp
 
 USR_INCLUDES += $(XML2_INCLUDE)
+
+WBPcs8000_SYS_LIBS += xml2
 include $(TOP)/configure/RULES
