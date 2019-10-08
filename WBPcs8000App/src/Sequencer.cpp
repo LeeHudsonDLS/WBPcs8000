@@ -4,14 +4,14 @@
 
 #include "Sequencer.h"
 
-Sequencer::Sequencer(std::string xmlTemplateFile) {
+Sequencer::Sequencer(const std::string& xmlTemplateFile) {
 
-    pDoc = xmlParseFile(xmlTemplateFile.c_str());
+    pDoc = xmlParseMemory(xmlTemplateFile.c_str(),xmlTemplateFile.size());
 	if (pDoc == NULL ) {
 		printf("Document not parsed successfully. \n");
 		//Some error handling
 	}else{
-		printf("%s parsed successfully. \n",xmlTemplateFile.c_str());
+		printf("XML parsed successfully. \n");
 	}
 
 }

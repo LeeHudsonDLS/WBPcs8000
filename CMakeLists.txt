@@ -35,7 +35,7 @@ set(WBPCS8000_SOURCE_FILES
     cmake-build-debug/CMakeFiles/feature_tests.c
     cmake-build-debug/CMakeFiles/3.14.5/CompilerIdC/CMakeCCompilerId.c
     cmake-build-debug/CMakeFiles/3.14.5/CompilerIdCXX/CMakeCXXCompilerId.cpp
-)
+        WBPcs8000App/src/XmlTemplates.h)
 
 add_library(WBPcs8000_source ${WBPCS8000_SOURCE_FILES})
 add_custom_target(WBPcs8000_build

@@ -12,16 +12,18 @@
 #include <epicsExport.h>
 #include <algorithm>
 #include <stdlib.h>
+#include "XmlTemplates.h"
 
 #include <epicsExport.h>
 pcsAxis::pcsAxis(pcsController *ctrl, int axisNo)
         :asynMotorAxis((asynMotorController *) ctrl, axisNo),
         ctrl_(ctrl),
-        relativeMoveSequencer("relativeMoveTemplate.xml"){
+        relativeMoveSequencer(relativeMoveTemplate){
 
     static const char *functionName = "pcsAxis::pcsAxis";
     asynPrint(ctrl_->pasynUserSelf, ASYN_TRACE_FLOW, "%s\r",functionName);
 
+    std::string file_path = __FILE__;
     //Initialize non-static data members
     velocity_ = 0.0;
     accel_ = 0.0;
