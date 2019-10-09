@@ -1,7 +1,7 @@
 from iocbuilder import AutoSubstitution
 from iocbuilder import Device
 from iocbuilder.arginfo import *
-from iocbuilder.modules.asyn import Asyn, AsynPort
+from iocbuilder.modules.asyn import Asyn, AsynPort,AsynIP
 from iocbuilder.modules.motor import MotorLib, MotorRecord
 from iocbuilder.modules.calc import Calc
 from iocbuilder.modules.busy import Busy
@@ -20,10 +20,11 @@ class pcsController(Device):
 
 
     # Constructor, just store parameters
-    def __init__(self, PORT,  ASYN_PORT, name = None, ASYN_ADDRESS=0, NUM_AXES=2, POLLMOVING=200,POLLNOTMOVING=200, **args):
+    def __init__(self, PORT,  IP_ADDRESS, name = None, ASYN_ADDRESS=0, NUM_AXES=2, POLLMOVING=200,POLLNOTMOVING=200, **args):
+        self.ASYN_TCP_CONTROL = AsynIP('%s:6789' % IP_ADDRESS, '%s_CTRL' % PORT)
         Device.__init__(self)
         self.PORT = PORT
-        self.ASYN_PORT = ASYN_PORT
+        self.IP_ADDRESS = IP_ADDRESS
         self.name = name
         self.ASYN_ADDRESS = ASYN_ADDRESS
         self.NUM_AXES = NUM_AXES
@@ -33,13 +34,13 @@ class pcsController(Device):
     # Once per instantiation
     def Initialise(self):
         print "# Configure Walter and Bai PCS8000 controller"
-        print "# pcsControllerConfig(%(PORT)s, %(ASYN_PORT)s, %(ASYN_ADDRESS)d, %(NUM_AXES)d, %(POLLMOVING)d, %(POLLNOTMOVING)d)"
-        print "pcsControllerConfig(%(PORT)s, %(ASYN_PORT)s, %(ASYN_ADDRESS)d, %(NUM_AXES)d, %(POLLMOVING)d, %(POLLNOTMOVING)d)" % self.__dict__
+        print "# pcsControllerConfig(%(PORT)s, %(PORT)s_CTRL, %(ASYN_ADDRESS)d, %(NUM_AXES)d, %(POLLMOVING)d, %(POLLNOTMOVING)d)"
+        print "pcsControllerConfig(%(PORT)s, %(PORT)s_CTRL, %(ASYN_ADDRESS)d, %(NUM_AXES)d, %(POLLMOVING)d, %(POLLNOTMOVING)d)" % self.__dict__
 
     # Arguments
     ArgInfo = makeArgInfo(__init__,
         PORT = Simple("Asyn port name", str),
-        ASYN_PORT = Ident("Asyn IP port name", AsynPort),
+        IP_ADDRESS = Simple("Asyn IP port name", str),
         name = Simple("Controller name", str),
         ASYN_ADDRESS = Simple("Asyn IP port address", int),
         NUM_AXES = Simple("Number of axes", int),
