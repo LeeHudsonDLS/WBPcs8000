@@ -1,12 +1,6 @@
 #include "XmlCommandConstructor.h"
 
 
-XmlCommandConstructor::XmlCommandConstructor(int slaveNo):slaveNo(slaveNo) {
-    std::stringstream stringstream;
-    stringstream << "<slave>" << slaveNo << "</slave>";
-    slaveXml = stringstream.str();
-}
-
 /**
  * Method to derive an XML string form a comma delimited string. Only allows access to single element. Last element is the value.
  * @param csvCommand A string representing the desired XML
@@ -38,7 +32,7 @@ std::string XmlCommandConstructor::addXML(const std::string& csvCommand, const s
             if(direction == 1) {
                 xmlCommand += "<" + *iterator + ">";
                 if(iterator == singleCommand.begin())
-                    xmlCommand += slaveXml;
+                    xmlCommand += "<slave></slave>";
             }else
                 xmlCommand += "</" + *iterator + ">";
         }
@@ -48,6 +42,18 @@ std::string XmlCommandConstructor::addXML(const std::string& csvCommand, const s
     return xmlCommand;
 }
 
+std::string XmlCommandConstructor::appendSlave(int slave, std::string xml) {
+
+    int pos;
+    std::stringstream slaveString;
+    slaveString<<"<slave>"<< slave<<"</slave>";
+    while ((pos = xml.find("<slave></slave>")) != std::string::npos)
+        xml.replace(pos, 15, slaveString.str());
+
+    return xml;
+}
+
+
 /**
  * Adds an input parameter to the inputMap in xml form with the slave element and the input value added.
  * @param parameter A key so the XML string can be retrieved from the inputMap Map container
@@ -55,7 +61,10 @@ std::string XmlCommandConstructor::addXML(const std::string& csvCommand, const s
  * @param input The input number
  */
 void XmlCommandConstructor::addInputParameter(const std::string &parameter, const std::string &csvCommand,int input) {
-    inputMap.insert(std::pair<std::string,std::string>(parameter,addXML(csvCommand,std::to_string(input))));
+    std::stringstream inputStringStream;
+    inputStringStream << input;
+
+    inputMap.insert(std::pair<std::string,std::string>(parameter,addXML(csvCommand,inputStringStream.str())));
 }
 
 /**
@@ -73,8 +82,9 @@ void XmlCommandConstructor::addInputParameter(const std::string &parameter, cons
  * @param parameter Key for the parameter
  * @return XML string for the parameter
  */
-std::string XmlCommandConstructor::getInputXml(const std::string &parameter) {
-    return inputMap.find(parameter)->second;
+std::string XmlCommandConstructor::getInputXml(int slave, const std::string &parameter) {
+
+    return appendSlave(slave,inputMap.find(parameter)->second);
 }
 
 /**
@@ -92,14 +102,14 @@ void XmlCommandConstructor::addParameter(const std::string &parameter, const std
  * @param parameter Key for the parameter
  * @return XML string for the parameter
  */
-std::string XmlCommandConstructor::getXml(const std::string &parameter) {
+std::string XmlCommandConstructor::getXml(int slave,const std::string &parameter) {
 
     std::string commandString = commandMap.find(parameter)->second;
 
     //Remove ! character for commands with no value
     commandString.erase(std::remove(commandString.begin(),commandString.end(),'!'),commandString.end());
 
-    return commandString;
+    return appendSlave(slave,commandString);
 }
 
 /**
@@ -108,15 +118,17 @@ std::string XmlCommandConstructor::getXml(const std::string &parameter) {
  * @param val Integer value to set the parameter to
  * @return XML string for the parameter
  */
-std::string XmlCommandConstructor::getXml(const std::string &parameter,int val) {
+std::string XmlCommandConstructor::getXml(int slave, const std::string &parameter,int val) {
 
     int pos;
     std::string commandString = commandMap.find(parameter)->second;
+    std::stringstream inputStringStream;
+    inputStringStream << val;
 
     while ((pos = commandString.find("!")) != std::string::npos)
-        commandString.replace(pos, 1, std::to_string(val));
+        commandString.replace(pos, 1, inputStringStream.str());
 
-    return commandString;
+    return appendSlave(slave,commandString);
 }
 
 /**
@@ -125,7 +137,7 @@ std::string XmlCommandConstructor::getXml(const std::string &parameter,int val) 
  * @param val String value to set the parameter to
  * @return XML string for the parameter
  */
-std::string XmlCommandConstructor::getXml(const std::string &parameter,std::string val) {
+std::string XmlCommandConstructor::getXml(int slave, const std::string &parameter,std::string val) {
 
     int pos;
     std::string commandString = commandMap.find(parameter)->second;
@@ -133,5 +145,20 @@ std::string XmlCommandConstructor::getXml(const std::string &parameter,std::stri
     while ((pos = commandString.find("!")) != std::string::npos)
         commandString.replace(pos, 1, val);
 
-    return commandString;
+    return appendSlave(slave,commandString);
+}
+
+std::string XmlCommandConstructor::dumpXml() {
+
+    std::map<std::string,std::string>::iterator iter1;
+
+    for(iter1 = commandMap.begin(); iter1 != commandMap.end(); ++iter1){
+        printf("%s\n",iter1->second.c_str());
+    }
+
+
+    for(iter1 = inputMap.begin(); iter1 != inputMap.end(); ++iter1){
+        printf("%s\n",iter1->second.c_str());
+    }
+
 }
