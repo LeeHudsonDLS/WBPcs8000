@@ -9,7 +9,6 @@
 #include <string>
 #include <vector>
 #include <stdio.h>
-#include "XmlCommandConstructor.h"
 #include "Sequencer.h"
 
 class pcsController;
@@ -33,7 +32,6 @@ class pcsAxis : public asynMotorAxis{
 private:
     /* Data */
     pcsController *ctrl_;
-    XmlCommandConstructor commandConstructor;
     Sequencer relativeMoveSequencer;
     double velocity_ ;
     double accel_;

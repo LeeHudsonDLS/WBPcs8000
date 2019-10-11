@@ -27,6 +27,14 @@ pcsController::pcsController(const char *portName, const char *lowLevelPortName,
         asynPrint(this->pasynUserSelf, ASYN_TRACE_ERROR,
       "%s: cannot connect to pcs controller\n",functionName);
     }
+
+    commandConstructor.addParameter(START_UDP_CMD,"udpxmit,start");
+    commandConstructor.addParameter(START_SEQ_CMD,"sequencer,set,seq_state");
+    commandConstructor.addParameter(REGISTER_STREAM_CMD, "udpxmit,register,stream");
+    commandConstructor.addParameter(CLEAR_UDP,"udpxmit,clear");
+
+    commandConstructor.dumpXml();
+
     startPoller(movingPollPeriod, idlePollPeriod, 2);
 }
 

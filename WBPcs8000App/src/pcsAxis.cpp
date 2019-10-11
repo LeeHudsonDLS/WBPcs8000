@@ -38,17 +38,7 @@ void pcsAxis::initialise(int axisNo) {
     printf("Axis %d created \n",axisNo);
 
 
-    /*
-     * Set up UDP streaming
-     */
-    XmlCommandConstructor udpSetup;
-    udpSetup.addCSV("maincontrol,set,sys_state,Ready");
-    udpSetup.addCSV("udpxmit,clear,,");
-    udpSetup.addCSV("udpxmit,register,stream,phys14");
-    udpSetup.addCSV("udpxmit,register,stream,phys1");
-    udpSetup.addCSV("eventcom,start,,");
 
-    printf("Initialise called\n%s\n",udpSetup.getXml().c_str());
     // Send the xml
     //sprintf(ctrl_->outString_, "%s",udpSetup.getXml().c_str());
     //ctrl_->writeController();
