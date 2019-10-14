@@ -16,9 +16,8 @@ Sequencer::Sequencer(const std::string& xmlTemplateFile) {
 
 }
 
-int Sequencer::setElement(std::string xPath, std::string value) {
+int Sequencer::setElement(const std::string& xPath, const std::string& value) {
 
-	xmlChar *keyword;
 	xmlChar *xpath = (xmlChar*) xPath.c_str();
 	xmlXPathContextPtr context;
 
@@ -45,9 +44,23 @@ int Sequencer::setElement(std::string xPath, std::string value) {
         //Set the value
         xmlNodeSetContent(nodeset->nodeTab[0],(const xmlChar*)value.c_str());
 
-        xmlFree(keyword);
 		xmlXPathFreeObject (searchResult);
 	}
+
+}
+
+
+int Sequencer::setElement(const std::string& xPath, const int& value) {
+    char buffer[255];
+    sprintf(buffer,"%d\n",value);
+    setElement(xPath,buffer);
+
+}
+
+int Sequencer::setElement(const std::string& xPath, const double& value) {
+    char buffer[255];
+    sprintf(buffer,"%d\n",value);
+    setElement(xPath,buffer);
 
 }
 

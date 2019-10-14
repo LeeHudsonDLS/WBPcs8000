@@ -13,7 +13,9 @@
 class Sequencer {
 public:
     Sequencer(const std::string& xmlTemplateFile);
-    int setElement(std::string xPath, std::string value);
+    int setElement(const std::string& xPath, const std::string& value);
+    int setElement(const std::string& xPath, const int& value);
+    int setElement(const std::string& xPath, const double& value);
     std::string getXml();
 private:
     xmlDocPtr pDoc;
