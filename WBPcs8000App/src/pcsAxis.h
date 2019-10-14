@@ -33,6 +33,7 @@ private:
     /* Data */
     pcsController *ctrl_;
     Sequencer relativeMoveSequencer;
+    Sequencer absoluteMoveSequencer;
     double velocity_ ;
     double accel_;
     friend class pcsController;

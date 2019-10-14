@@ -18,7 +18,8 @@
 pcsAxis::pcsAxis(pcsController *ctrl, int axisNo)
         :asynMotorAxis((asynMotorController *) ctrl, axisNo),
         ctrl_(ctrl),
-        relativeMoveSequencer(relativeMoveTemplate){
+        relativeMoveSequencer(relativeMoveTemplate),
+        absoluteMoveSequencer(absoluteMoveTemplate){
 
     static const char *functionName = "pcsAxis::pcsAxis";
     asynPrint(ctrl_->pasynUserSelf, ASYN_TRACE_FLOW, "%s\r",functionName);
@@ -29,6 +30,10 @@ pcsAxis::pcsAxis(pcsController *ctrl, int axisNo)
     accel_ = 0.0;
     initialise(axisNo_);
 
+    relativeMoveSequencer.setElement("//slave",axisNo-1);
+    absoluteMoveSequencer.setElement("//slave",axisNo-1);
+
+    printf("%s\n",relativeMoveSequencer.getXml().c_str());
     //asynStatus status = ctrl_->writeReadController();
 
 }
