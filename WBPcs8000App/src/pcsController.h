@@ -17,11 +17,20 @@
 #define NUM_OF_PCS_PARAMS   1
 
 #define START_UDP_CMD "start_udp_cmd"
-#define START_SEQ_CMD "start_seq_cmd"
-#define REGISTER_STREAM_CMD "register_stream_cmd"
-#define CLEAR_UDP "clear_udp"
+#define CLEAR_UDP_CMD "clear_udp_cmd"
 
+#define SEQ_CONTROL_PARAM "seq_control_param"
+#define REGISTER_STREAM_PARAM "register_stream_param"
+#define SYS_STATE_PARAM "sys_state_param"
 
+#define POS_LIMIT_INPUT "pos_limit_input"
+#define NEG_LIMIT_INPUT "neg_limit_input"
+#define DRV_READY_INPUT "drive_ready_input"
+
+/*
+ * Commonly used xml locations in CSV representation to be used directly by the XmlCommandConstructor
+ */
+#define GET_INPUT "digital_io,get,input"
 
 
 class pcsController

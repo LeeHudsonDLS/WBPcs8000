@@ -28,12 +28,20 @@ pcsController::pcsController(const char *portName, const char *lowLevelPortName,
       "%s: cannot connect to pcs controller\n",functionName);
     }
 
+    //Parameters that do not require a value
     commandConstructor.addParameter(START_UDP_CMD,"udpxmit,start");
-    commandConstructor.addParameter(START_SEQ_CMD,"sequencer,set,seq_state");
-    commandConstructor.addParameter(REGISTER_STREAM_CMD, "udpxmit,register,stream");
-    commandConstructor.addParameter(CLEAR_UDP,"udpxmit,clear");
+    commandConstructor.addParameter(CLEAR_UDP_CMD,"udpxmit,clear");
 
-    commandConstructor.dumpXml();
+    //Parameters that require a value
+    commandConstructor.addParameter(SEQ_CONTROL_PARAM,"sequencer,set,seq_state");       // Set to "program" to start sequence
+    commandConstructor.addParameter(REGISTER_STREAM_PARAM, "udpxmit,register,stream");  // Set to stream required, eg, phys14
+    commandConstructor.addParameter(SYS_STATE_PARAM, "maincontrol,set,sys_state");      // Set to "Ready" to enable drives
+
+    commandConstructor.addInputParameter(POS_LIMIT_INPUT,GET_INPUT,2);
+    commandConstructor.addInputParameter(NEG_LIMIT_INPUT,GET_INPUT,3);
+    commandConstructor.addInputParameter(DRV_READY_INPUT,GET_INPUT,1);
+
+    //commandConstructor.dumpXml();
 
     startPoller(movingPollPeriod, idlePollPeriod, 2);
 }
