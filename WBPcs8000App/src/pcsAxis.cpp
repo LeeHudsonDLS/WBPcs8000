@@ -59,6 +59,11 @@ asynStatus pcsAxis::move(double position, int relative, double minVelocity, doub
 
     printf("pcsAxis::move() called\n");
 
+    // Set the velocity
+    absoluteMoveSequencer.setElement("//rate",maxVelocity);
+    absoluteMoveSequencer.setElement("//end_ampl",position);
+    printf("%s\n",absoluteMoveSequencer.getXml().c_str());
+
     asynPrint(ctrl_->pasynUserSelf, ASYN_TRACE_FLOW, "%s\n", functionName);
 
     sprintf(ctrl_->outString_, "#%dj=%f\n\r ", axisNo_, position);
