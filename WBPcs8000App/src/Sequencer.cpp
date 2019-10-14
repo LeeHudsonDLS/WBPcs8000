@@ -59,7 +59,7 @@ int Sequencer::setElement(const std::string& xPath, const int& value) {
 
 int Sequencer::setElement(const std::string& xPath, const double& value) {
     char buffer[255];
-    sprintf(buffer,"%d\n",value);
+    sprintf(buffer,"%f\n",value);
     setElement(xPath,buffer);
 
 }
