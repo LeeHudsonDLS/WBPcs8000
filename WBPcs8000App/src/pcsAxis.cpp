@@ -4,17 +4,10 @@
 
 #include "pcsAxis.h"
 #include "pcsController.h"
-#include <stdlib.h>
-#include <epicsThread.h>
-#include <sstream>
-#include <iostream>
-#include <iocsh.h>
-#include <epicsExport.h>
-#include <algorithm>
-#include <stdlib.h>
 #include "XmlTemplates.h"
 
 #include <epicsExport.h>
+
 pcsAxis::pcsAxis(pcsController *ctrl, int axisNo)
         :asynMotorAxis((asynMotorController *) ctrl, axisNo),
         ctrl_(ctrl),
@@ -33,8 +26,8 @@ pcsAxis::pcsAxis(pcsController *ctrl, int axisNo)
     relativeMoveSequencer.setElement("//slave",axisNo-1);
     absoluteMoveSequencer.setElement("//slave",axisNo-1);
 
-    //printf("%s\n",relativeMoveSequencer.getXml().c_str());
-    //asynStatus status = ctrl_->writeReadController();
+    sprintf(ctrl_->outString_,ctrl_->commandConstructor.getXml(axisNo,SYS_STATE_PARAM,"Ready").c_str());
+    ctrl_->writeController();
 
 }
 
@@ -54,22 +47,28 @@ void pcsAxis::initialise(int axisNo) {
 asynStatus pcsAxis::move(double position, int relative, double minVelocity, double maxVelocity, double acceleration){
 
     double distance = 0;
+    size_t nwrite;
     asynStatus status = asynError;
     static const char *functionName = "move";
-
+    char seqBuffer[4096];
     printf("pcsAxis::move() called\n");
 
     // Set the velocity
     absoluteMoveSequencer.setElement("//rate",maxVelocity);
     absoluteMoveSequencer.setElement("//end_ampl",position);
-    printf("%s\n",absoluteMoveSequencer.getXml().c_str());
+
+    sprintf(seqBuffer,absoluteMoveSequencer.getXml().c_str());
+    pasynOctetSyncIO->write(ctrl_->pasynUserController_,seqBuffer,strlen(seqBuffer),DEFAULT_CONTROLLER_TIMEOUT,&nwrite);
+
+
+    sprintf(ctrl_->outString_,ctrl_->commandConstructor.getXml(axisNo_,SEQ_CONTROL_PARAM,"Program").c_str());
+    printf("Command Size = %d\n",strlen(ctrl_->outString_));
+    ctrl_->writeController();
 
     asynPrint(ctrl_->pasynUserSelf, ASYN_TRACE_FLOW, "%s\n", functionName);
 
-    sprintf(ctrl_->outString_, "#%dj=%f\n\r ", axisNo_, position);
-    ctrl_->writeController();
 
-    // setIntegerParam(ctrl_->motorStatusMoving_, false);
+    setIntegerParam(ctrl_->motorStatusMoving_, false);
     // ctrl_->wakeupPoller();
     return asynSuccess;
 }

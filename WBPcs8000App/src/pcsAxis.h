@@ -6,10 +6,16 @@
 #define PCSAXIS_H
 #include "asynMotorController.h"
 #include "asynMotorAxis.h"
+#include <iocsh.h>
+#include <epicsExport.h>
 #include <string>
 #include <vector>
 #include <stdio.h>
+#include <algorithm>
+#include <stdlib.h>
+#include <asynOctetSyncIO.h>
 #include "Sequencer.h"
+
 
 class pcsController;
 
