@@ -17,15 +17,31 @@ pcsController::pcsController(const char *portName, const char *lowLevelPortName,
                               0,
                               0)
 {
+    size_t nwrite;
+    int eomReason;
     asynStatus status;
     static const char *functionName = "pcsController::pcsController";
     createAsynParams();
 
     /* Connect to pcsController controller */
     status = pasynOctetSyncIO->connect(lowLevelPortName, 0, &pasynUserController_, NULL);
+
     if (status) {
         asynPrint(this->pasynUserSelf, ASYN_TRACE_ERROR,
-      "%s: cannot connect to pcs controller\n",functionName);
+                  "%s: cannot connect to pcs controller\n",functionName);
+    }
+    // Initial handshaking
+    sprintf(outString_,"");
+    writeReadController();
+    sprintf(outString_,"%s,%.2f,%d",NAME,VERSION,CODE);
+    writeReadController();
+
+    if(strcmp(inString_,"OK"))
+        status=asynError;
+
+    if (status) {
+        asynPrint(this->pasynUserSelf, ASYN_TRACE_ERROR,
+                  "%s: Handshake with controller failed\n",functionName);
     }
 
     //Parameters that do not require a value

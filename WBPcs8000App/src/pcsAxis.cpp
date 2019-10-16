@@ -33,7 +33,7 @@ pcsAxis::pcsAxis(pcsController *ctrl, int axisNo)
     relativeMoveSequencer.setElement("//slave",axisNo-1);
     absoluteMoveSequencer.setElement("//slave",axisNo-1);
 
-    printf("%s\n",relativeMoveSequencer.getXml().c_str());
+    //printf("%s\n",relativeMoveSequencer.getXml().c_str());
     //asynStatus status = ctrl_->writeReadController();
 
 }
@@ -91,16 +91,13 @@ asynStatus pcsAxis::setPosition(double position){
 }
 
 asynStatus pcsAxis::poll(bool *moving) {
-/*
-    sprintf(ctrl_->outString_, "#%dj=%f\n\r ", axisNo_, 13.000000);
-    ctrl_->writeReadController();
-    setDoubleParam(ctrl_->motorPosition_,12);
-    callParamCallbacks();
-*/
 
+/*
 
     sprintf(ctrl_->outString_,"#%dp\r",axisNo_);
     ctrl_->writeReadController();
+ */
+
     setIntegerParam(ctrl_->motorStatusDone_,1);
     setDoubleParam(ctrl_->motorPosition_,atoi(ctrl_->inString_));
     *moving = false;

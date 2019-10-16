@@ -21,7 +21,7 @@ class pcsController(Device):
 
     # Constructor, just store parameters
     def __init__(self, PORT,  IP_ADDRESS, name = None, ASYN_ADDRESS=0, NUM_AXES=2, POLLMOVING=200,POLLNOTMOVING=200, **args):
-        self.ASYN_TCP_CONTROL = AsynIP('%s:6789' % IP_ADDRESS, '%s_CTRL' % PORT)
+        self.ASYN_TCP_CONTROL = AsynIP('%s:51512' % IP_ADDRESS, '%s_CTRL' % PORT, input_eos="\r\n",output_eos="\r\n")
         Device.__init__(self)
         self.PORT = PORT
         self.IP_ADDRESS = IP_ADDRESS

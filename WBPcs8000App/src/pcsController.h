@@ -16,6 +16,11 @@
 #define PCS_C_FirstParamString           "PCS_C_FIRSTPARAM"
 #define NUM_OF_PCS_PARAMS   1
 
+// Items used for initial handshaking
+#define NAME "DLS"
+#define VERSION 1.00
+#define CODE 1234
+
 #define START_UDP_CMD "start_udp_cmd"
 #define CLEAR_UDP_CMD "clear_udp_cmd"
 
