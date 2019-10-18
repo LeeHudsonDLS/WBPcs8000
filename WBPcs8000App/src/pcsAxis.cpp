@@ -58,6 +58,7 @@ asynStatus pcsAxis::move(double position, int relative, double minVelocity, doub
     absoluteMoveSequencer.setElement("//end_ampl",position);
 
     sprintf(seqBuffer,absoluteMoveSequencer.getXml().c_str());
+    printf(seqBuffer);
     pasynOctetSyncIO->write(ctrl_->pasynUserController_,seqBuffer,strlen(seqBuffer),DEFAULT_CONTROLLER_TIMEOUT,&nwrite);
 
 
