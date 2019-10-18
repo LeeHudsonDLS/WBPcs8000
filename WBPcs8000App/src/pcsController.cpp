@@ -7,7 +7,7 @@
 #include <iocsh.h>
 #include <epicsExport.h>
 
-pcsController::pcsController(const char *portName, const char *lowLevelPortName, int lowLevelPortAddress, int numAxes,
+pcsController::pcsController(const char *portName, int lowLevelPortAddress, int numAxes,
                               double movingPollPeriod, double idlePollPeriod)
     : asynMotorController(portName, numAxes + 1, NUM_MOTOR_DRIVER_PARAMS + NUM_OF_PCS_PARAMS,
                               0,
@@ -22,6 +22,9 @@ pcsController::pcsController(const char *portName, const char *lowLevelPortName,
     asynStatus status;
     static const char *functionName = "pcsController::pcsController";
     createAsynParams();
+    lowLevelPortName = (char*)malloc((strlen(portName)+1)*sizeof(char*));
+    sprintf(lowLevelPortName,portName);
+    strcat(lowLevelPortName,"_CTRL");
 
     /* Connect to pcsController controller */
     status = pasynOctetSyncIO->connect(lowLevelPortName, 0, &pasynUserController_, NULL);
@@ -101,7 +104,7 @@ pcsAxis* pcsController::getAxis(int axisNo)
   * \param[in] serialPortName The name of the serial port connected to the device.
   * \param[in] serialPortAddress The address of the serial port (usually 0).
   */
-extern "C" int pcsControllerConfig(const char *portName, const char *lowLevelPortName, int lowLevelPortAddress,
+extern "C" int pcsControllerConfig(const char *portName, int lowLevelPortAddress,
                                    int numAxes, int movingPollPeriod, int idlePollPeriod)
 {
     int result = asynSuccess;
@@ -113,7 +116,7 @@ extern "C" int pcsControllerConfig(const char *portName, const char *lowLevelPor
     }
     else
     {
-        new pcsController(portName, lowLevelPortName,
+        new pcsController(portName,
                           lowLevelPortAddress, numAxes,
                           movingPollPeriod / 1000.,
                           idlePollPeriod / 1000.);
@@ -123,23 +126,21 @@ extern "C" int pcsControllerConfig(const char *portName, const char *lowLevelPor
 
 /* Code for iocsh registration for pcsController*/
 static const iocshArg pcsControllerConfigArg0 = {"Port name", iocshArgString};
-static const iocshArg pcsControllerConfigArg1 = {"Low level port name", iocshArgString};
-static const iocshArg pcsControllerConfigArg2 = {"Low level port address", iocshArgInt};
-static const iocshArg pcsControllerConfigArg3 = {"Number of axes", iocshArgInt};
-static const iocshArg pcsControllerConfigArg4 = {"Moving poll period (ms)", iocshArgInt};
-static const iocshArg pcsControllerConfigArg5 = {"Idle poll period (ms)", iocshArgInt};
+static const iocshArg pcsControllerConfigArg1 = {"Low level port address", iocshArgInt};
+static const iocshArg pcsControllerConfigArg2 = {"Number of axes", iocshArgInt};
+static const iocshArg pcsControllerConfigArg3 = {"Moving poll period (ms)", iocshArgInt};
+static const iocshArg pcsControllerConfigArg4 = {"Idle poll period (ms)", iocshArgInt};
 
 static const iocshArg* const pcsControllerConfigArgs[] =
-    {&pcsControllerConfigArg0, &pcsControllerConfigArg1, &pcsControllerConfigArg2, &pcsControllerConfigArg3, &pcsControllerConfigArg4,
-        &pcsControllerConfigArg5};
+    {&pcsControllerConfigArg0, &pcsControllerConfigArg1, &pcsControllerConfigArg2, &pcsControllerConfigArg3, &pcsControllerConfigArg4};
 
 static const iocshFuncDef configPcsController =
-    {"pcsControllerConfig", 6, pcsControllerConfigArgs};
+    {"pcsControllerConfig", 5, pcsControllerConfigArgs};
 
 static void configPcsControllerCallFunc(const iocshArgBuf *args)
 {
-    pcsControllerConfig(args[0].sval, args[1].sval, args[2].ival, args[3].ival,
-        args[4].ival, args[5].ival);
+    pcsControllerConfig(args[0].sval, args[1].ival, args[2].ival,
+        args[3].ival, args[4].ival);
 }
 
 static void PcsControllerRegister(void)

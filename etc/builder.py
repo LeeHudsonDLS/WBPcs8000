@@ -35,9 +35,10 @@ class pcsController(Device):
     def Initialise(self):
         print "# Configure UDP port for Walter and Bai streams"
         print "drvAsynIPServerPortConfigure(%(PORT)s_UDP,%(IP_ADDRESS)s:51513 , 10, 0, 0, 0)" % self.__dict__
+
         print "# Configure Walter and Bai PCS8000 controller"
-        print "# pcsControllerConfig(%(PORT)s, %(PORT)s_CTRL, %(ASYN_ADDRESS)d, %(NUM_AXES)d, %(POLLMOVING)d, %(POLLNOTMOVING)d)"
-        print "pcsControllerConfig(%(PORT)s, %(PORT)s_CTRL, %(ASYN_ADDRESS)d, %(NUM_AXES)d, %(POLLMOVING)d, %(POLLNOTMOVING)d)" % self.__dict__
+        print "# pcsControllerConfig(%(PORT)s,%(ASYN_ADDRESS)d, %(NUM_AXES)d, %(POLLMOVING)d, %(POLLNOTMOVING)d)"
+        print "pcsControllerConfig(%(PORT)s, %(ASYN_ADDRESS)d, %(NUM_AXES)d, %(POLLMOVING)d, %(POLLNOTMOVING)d)" % self.__dict__
 
     # Arguments
     ArgInfo = makeArgInfo(__init__,

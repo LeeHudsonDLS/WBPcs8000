@@ -41,12 +41,13 @@
 class pcsController
         : public asynMotorController {
 public:
-    pcsController(const char *portName, const char *lowLevelPortName, int lowLevelPortAddress,
+    pcsController(const char *portName, int lowLevelPortAddress,
                   int numAxes, double movingPollPeriod,
                   double idlePollPeriod);
     ~pcsController();
 
     asynStatus poll();
+    char* lowLevelPortName;
     enum OperatingMode {MotorRecord=0, Jog=1};
     enum JogOperation {Stop=0, Forward=1, Reverse=2};
     void createAsynParams(void);
