@@ -4,6 +4,10 @@
 
 #ifndef PCSCONTROLLER_H
 #define PCSCONTROLLER_H
+#include <stdio.h>
+#include <stdlib.h>
+#include <unistd.h>
+
 
 #include <epicsTypes.h>
 #include <epicsThread.h>
@@ -20,6 +24,11 @@
 #define NAME "DLS"
 #define VERSION 1.00
 #define CODE 1234
+
+#define MAIN_PORT_SUFFIX "_CTRL"
+#define STREAMS_PORT_SUFFIX "_UDP"
+#define EVENT_PORT_SUFFIX   "_TCP"
+
 
 #define START_UDP_CMD "start_udp_cmd"
 #define CLEAR_UDP_CMD "clear_udp_cmd"
@@ -48,6 +57,8 @@ public:
 
     asynStatus poll();
     char* lowLevelPortName;
+    char* streamPortName;
+    char* eventPortName;
     enum OperatingMode {MotorRecord=0, Jog=1};
     enum JogOperation {Stop=0, Forward=1, Reverse=2};
     void createAsynParams(void);
@@ -59,6 +70,9 @@ protected:
     //pcsAxis **pAxes_;    /**< Array of pointers to axis objects */
 
     int PCS_C_FirstParam;
+    void* drvPtr;
+    asynOctet* pasynOctet;
+    asynUser* pasynUserUDPStream;
 
 #define FIRST_PCS_PARAM PCS_C_FirstParam
 

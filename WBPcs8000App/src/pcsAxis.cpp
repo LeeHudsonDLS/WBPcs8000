@@ -29,6 +29,15 @@ pcsAxis::pcsAxis(pcsController *ctrl, int axisNo)
     sprintf(ctrl_->outString_,ctrl_->commandConstructor.getXml(axisNo,SYS_STATE_PARAM,"Ready").c_str());
     ctrl_->writeController();
 
+    sprintf(ctrl_->outString_,ctrl_->commandConstructor.getXml(axisNo,CLEAR_UDP_CMD).c_str());
+    ctrl_->writeController();
+    sprintf(ctrl_->outString_,ctrl_->commandConstructor.getXml(axisNo,REGISTER_STREAM_PARAM,"phys14").c_str());
+    ctrl_->writeController();
+    sprintf(ctrl_->outString_,ctrl_->commandConstructor.getXml(axisNo,START_UDP_CMD).c_str());
+    ctrl_->writeController();
+
+
+
 }
 
 void pcsAxis::initialise(int axisNo) {

@@ -34,7 +34,7 @@ class pcsController(Device):
     # Once per instantiation
     def Initialise(self):
         print "# Configure UDP port for Walter and Bai streams"
-        print "drvAsynIPServerPortConfigure(%(PORT)s_UDP,%(IP_ADDRESS)s:51513 , 10, 0, 0, 0)" % self.__dict__
+        print 'drvAsynIPServerPortConfigure(%(PORT)s_UDP,"192.168.113.12:51513 udp", 10, 0, 0, 0)' % self.__dict__
 
         print "# Configure Walter and Bai PCS8000 controller"
         print "# pcsControllerConfig(%(PORT)s,%(ASYN_ADDRESS)d, %(NUM_AXES)d, %(POLLMOVING)d, %(POLLNOTMOVING)d)"

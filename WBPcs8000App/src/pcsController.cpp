@@ -7,24 +7,35 @@
 #include <iocsh.h>
 #include <epicsExport.h>
 
+
+
 pcsController::pcsController(const char *portName, int lowLevelPortAddress, int numAxes,
                               double movingPollPeriod, double idlePollPeriod)
     : asynMotorController(portName, numAxes + 1, NUM_MOTOR_DRIVER_PARAMS + NUM_OF_PCS_PARAMS,
-                              0,
-                              0,
+                          0,
+                          0,
                               ASYN_CANBLOCK | ASYN_MULTIDEVICE,
-                              1, // autoconnect
+                          1, // autoconnect
                               0,
-                              0)
+                          0)
 {
     size_t nwrite;
     int eomReason;
     asynStatus status;
     static const char *functionName = "pcsController::pcsController";
     createAsynParams();
-    lowLevelPortName = (char*)malloc((strlen(portName)+1)*sizeof(char*));
-    sprintf(lowLevelPortName,portName);
-    strcat(lowLevelPortName,"_CTRL");
+    char buffer[1024];
+
+
+    //Add portname suffix
+    lowLevelPortName = (char*)malloc(strlen(portName)+strlen(MAIN_PORT_SUFFIX)+1);
+    streamPortName = (char*)malloc(strlen(portName)+strlen(STREAMS_PORT_SUFFIX)+1);
+    eventPortName = (char*)malloc(strlen(portName)+strlen(EVENT_PORT_SUFFIX)+1);
+
+    sprintf(lowLevelPortName,"%s_CTRL",portName);
+    sprintf(streamPortName,"%s_UDP",portName);
+    sprintf(eventPortName,"%s_TCP",portName);
+
 
     /* Connect to pcsController controller */
     status = pasynOctetSyncIO->connect(lowLevelPortName, 0, &pasynUserController_, NULL);
@@ -60,9 +71,24 @@ pcsController::pcsController(const char *portName, int lowLevelPortAddress, int 
     commandConstructor.addInputParameter(NEG_LIMIT_INPUT,GET_INPUT,3);
     commandConstructor.addInputParameter(DRV_READY_INPUT,GET_INPUT,1);
 
-    //commandConstructor.dumpXml();
 
+
+    sprintf(outString_,commandConstructor.getXml(1,CLEAR_UDP_CMD).c_str());
+    writeController();
+    sprintf(outString_,commandConstructor.getXml(1,REGISTER_STREAM_PARAM,"phys14").c_str());
+    writeController();
+    sprintf(outString_,commandConstructor.getXml(1,START_UDP_CMD).c_str());
+    writeController();
+
+    //commandConstructor.dumpXml();
     startPoller(movingPollPeriod, idlePollPeriod, 2);
+
+
+
+
+
+
+
 }
 
 pcsController::~pcsController() {}
@@ -70,9 +96,10 @@ pcsController::~pcsController() {}
 
 
 asynStatus pcsController::poll() {
-
+    size_t nbytes;
+    int nreason;
+    char buffer[1024];
     return asynSuccess;
-
 }
 
 void pcsController::createAsynParams(void){
