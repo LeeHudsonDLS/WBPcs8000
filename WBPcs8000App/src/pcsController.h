@@ -47,6 +47,15 @@
 #define GET_INPUT "digital_io,get,input"
 
 
+#define BUFFER_SIZE 1024
+typedef struct myData {
+    epicsEventId done;
+    asynOctet    *pasynOctet;
+    void         *drvPvt;
+    char         buffer[BUFFER_SIZE];
+}myData;
+
+
 class pcsController
         : public asynMotorController {
 public:
@@ -64,15 +73,19 @@ public:
     void createAsynParams(void);
     pcsAxis *getAxis(asynUser *pasynUser);
     pcsAxis *getAxis(int axisNo);
-
+    myData *pmydata;
+    asynOctet *pasynOctet;
     XmlCommandConstructor commandConstructor;
+
+
+
+
 protected:
     //pcsAxis **pAxes_;    /**< Array of pointers to axis objects */
 
     int PCS_C_FirstParam;
     void* drvPtr;
-    asynOctet* pasynOctet;
-    asynUser* pasynUserUDPStream;
+    asynUser *pasynUserUDPStream;
 
 #define FIRST_PCS_PARAM PCS_C_FirstParam
 

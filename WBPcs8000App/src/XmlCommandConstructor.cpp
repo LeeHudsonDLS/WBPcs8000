@@ -148,6 +148,27 @@ std::string XmlCommandConstructor::getXml(int axis, const std::string &parameter
     return appendSlave(axis-1,commandString);
 }
 
+std::string XmlCommandConstructor::getEos(const std::string &xmlString) {
+    int found = -1;
+    std::string result;
+
+
+    int i = strlen(xmlString.c_str());
+
+    while((i>0&&found==-1)||(i<strlen(xmlString.c_str()))){
+        if(found==1){
+            result+=xmlString.c_str()[i];
+        }
+        if(xmlString.c_str()[i]=='/' && found ==-1){
+            found=1;
+            i=i-1;
+            result+=xmlString.c_str()[i];
+        }
+        i+=found;
+    }
+    return result;
+}
+
 std::string XmlCommandConstructor::dumpXml() {
 
     std::map<std::string,std::string>::iterator iter1;

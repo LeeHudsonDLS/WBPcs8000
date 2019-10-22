@@ -20,11 +20,11 @@ pcsController::pcsController(const char *portName, int lowLevelPortAddress, int 
                           0)
 {
     size_t nwrite;
-    int eomReason;
     asynStatus status;
     static const char *functionName = "pcsController::pcsController";
     createAsynParams();
     char buffer[1024];
+
 
 
     //Add portname suffix
@@ -47,8 +47,14 @@ pcsController::pcsController(const char *portName, int lowLevelPortAddress, int 
     // Initial handshaking
     sprintf(outString_,"");
     writeReadController();
+
+    printf("Debug1: %s\n",inString_);
+
     sprintf(outString_,"%s,%.2f,%d",NAME,VERSION,CODE);
     writeReadController();
+
+    printf("Debug2: %04x\n",inString_[0]);
+
 
     if(strcmp(inString_,"OK"))
         status=asynError;
@@ -74,20 +80,48 @@ pcsController::pcsController(const char *portName, int lowLevelPortAddress, int 
 
 
     sprintf(outString_,commandConstructor.getXml(1,CLEAR_UDP_CMD).c_str());
-    writeController();
+
+    pasynOctetSyncIO->setInputEos(pasynUserController_,">\0",1);
+    status=writeReadController();
+
+    if (status) {
+        asynPrint(this->pasynUserSelf, ASYN_TRACE_ERROR,
+                  "%s: writeReadController timeout\n",functionName);
+    }
     sprintf(outString_,commandConstructor.getXml(1,REGISTER_STREAM_PARAM,"phys14").c_str());
-    writeController();
+    status=writeReadController();
+
+    if (status) {
+        asynPrint(this->pasynUserSelf, ASYN_TRACE_ERROR,
+                  "%s: writeReadController timeout\n",functionName);
+    }
+
+
+
     sprintf(outString_,commandConstructor.getXml(1,START_UDP_CMD).c_str());
-    writeController();
+    printf("!!!!!!!!!!!!!!!!%s\n",outString_);
+    status=writeReadController();
+
+    if (status) {
+        asynPrint(this->pasynUserSelf, ASYN_TRACE_ERROR,
+                  "%s: writeReadController timeout\n",functionName);
+    }
+    printf("Got %s \n",inString_);
+
+    /*
+    pasynUserUDPStream = pasynManager->createAsynUser(0, 0);
+	status = pasynManager->connectDevice(pasynUserUDPStream, streamPortName, 0);
+
+    pasynUserUDPStream->drvUser = (void *) this;
+	if (status != asynSuccess) {
+		asynPrint(pasynUserSelf, ASYN_TRACE_ERROR,
+                  "%s: cannot connect to UDP\n",functionName);
+		return;
+	}*/
+
 
     //commandConstructor.dumpXml();
     startPoller(movingPollPeriod, idlePollPeriod, 2);
-
-
-
-
-
-
 
 }
 
@@ -99,6 +133,9 @@ asynStatus pcsController::poll() {
     size_t nbytes;
     int nreason;
     char buffer[1024];
+
+    //pasynOctet->read(pasynUserUDPStream->drvUser,pasynUserUDPStream,buffer,1024,&nbytes,&nreason);
+
     return asynSuccess;
 }
 
