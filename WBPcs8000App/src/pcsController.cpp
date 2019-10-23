@@ -17,13 +17,16 @@ pcsController::pcsController(const char *portName, int lowLevelPortAddress, int 
                               ASYN_CANBLOCK | ASYN_MULTIDEVICE,
                           1, // autoconnect
                               0,
-                          0)
+                          0),commandConstructor(*this)
 {
     size_t nwrite;
     asynStatus status;
     static const char *functionName = "pcsController::pcsController";
     createAsynParams();
     char buffer[1024];
+    std::string temp;
+    int a;
+    int test;
 
 
 
@@ -81,14 +84,19 @@ pcsController::pcsController(const char *portName, int lowLevelPortAddress, int 
 
     sprintf(outString_,commandConstructor.getXml(1,CLEAR_UDP_CMD).c_str());
 
-    pasynOctetSyncIO->setInputEos(pasynUserController_,">\0",1);
+    status = pasynOctetSyncIO->setInputEos(pasynUserController_,commandConstructor.getEos(CLEAR_UDP_CMD).c_str(),2);
+
     status=writeReadController();
+    inString_[0]='\0';
 
     if (status) {
         asynPrint(this->pasynUserSelf, ASYN_TRACE_ERROR,
                   "%s: writeReadController timeout\n",functionName);
     }
     sprintf(outString_,commandConstructor.getXml(1,REGISTER_STREAM_PARAM,"phys14").c_str());
+    //pasynOctetSyncIO->setInputEos(pasynUserController_,commandConstructor.getEos(REGISTER_STREAM_PARAM).c_str(),2);
+    status = pasynOctetSyncIO->setInputEos(pasynUserController_,"</>",2);
+    //pasynOctetSyncIO->getInputEos(pasynUserController_,buffer,1024,&test);
     status=writeReadController();
 
     if (status) {
@@ -99,6 +107,7 @@ pcsController::pcsController(const char *portName, int lowLevelPortAddress, int 
 
 
     sprintf(outString_,commandConstructor.getXml(1,START_UDP_CMD).c_str());
+    pasynOctetSyncIO->setInputEos(pasynUserController_,commandConstructor.getEos(START_UDP_CMD).c_str(),2);
     printf("!!!!!!!!!!!!!!!!%s\n",outString_);
     status=writeReadController();
 

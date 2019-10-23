@@ -1,6 +1,11 @@
 #include "XmlCommandConstructor.h"
 
 
+
+XmlCommandConstructor::XmlCommandConstructor(const pcsController &ctrl_):ctrl_(ctrl_) {
+
+}
+
 /**
  * Method to derive an XML string form a comma delimited string. Only allows access to single element. Last element is the value.
  * @param csvCommand A string representing the desired XML
@@ -42,6 +47,29 @@ std::string XmlCommandConstructor::addXML(const std::string& csvCommand, const s
     return xmlCommand;
 }
 
+
+std::string XmlCommandConstructor::extractEos(const std::string &xmlString) {
+    int found = -1;
+    std::string result;
+
+
+    int i = strlen(xmlString.c_str());
+
+    while((i>0&&found==-1)||(i<strlen(xmlString.c_str()))){
+        if(found==1){
+            result+=xmlString.c_str()[i];
+        }
+        if(xmlString.c_str()[i]=='/' && found ==-1){
+            found=1;
+            i=i-1;
+            result+=xmlString.c_str()[i];
+        }
+        i+=found;
+    }
+    return result;
+}
+
+
 std::string XmlCommandConstructor::appendSlave(int slave, std::string xml) {
 
     int pos;
@@ -63,8 +91,11 @@ std::string XmlCommandConstructor::appendSlave(int slave, std::string xml) {
 void XmlCommandConstructor::addInputParameter(const std::string &parameter, const std::string &csvCommand,int input) {
     std::stringstream inputStringStream;
     inputStringStream << input;
+    std::vector<std::string> data;
+    data.push_back(addXML(csvCommand,inputStringStream.str()));
+    data.push_back(extractEos(data[0]));
 
-    inputMap.insert(std::pair<std::string,std::string>(parameter,addXML(csvCommand,inputStringStream.str())));
+    inputMap.insert(std::pair<std::string,std::vector<std::string> >(parameter,data));
 }
 
 /**
@@ -74,7 +105,11 @@ void XmlCommandConstructor::addInputParameter(const std::string &parameter, cons
  * @param csvCommand A comma delimited string representation of the desired XML
  */
 void XmlCommandConstructor::addInputParameter(const std::string &parameter, const std::string &csvCommand) {
-    inputMap.insert(std::pair<std::string,std::string>(parameter,addXML(csvCommand,"")));
+
+    std::vector<std::string> data;
+    data.push_back(addXML(csvCommand,""));
+    data.push_back(extractEos(data[0]));
+    inputMap.insert(std::pair<std::string,std::vector<std::string> >(parameter,data));
 }
 
 /**
@@ -84,7 +119,7 @@ void XmlCommandConstructor::addInputParameter(const std::string &parameter, cons
  */
 std::string XmlCommandConstructor::getInputXml(int axis, const std::string &parameter) {
 
-    return appendSlave(axis-1,inputMap.find(parameter)->second);
+    return appendSlave(axis-1,inputMap.find(parameter)->second[0]);
 }
 
 /**
@@ -94,7 +129,11 @@ std::string XmlCommandConstructor::getInputXml(int axis, const std::string &para
  * @param csvCommand A comma delimited string representation of the desired XML
  */
 void XmlCommandConstructor::addParameter(const std::string &parameter, const std::string &csvCommand) {
-    commandMap.insert(std::pair<std::string,std::string>(parameter,addXML(csvCommand,"!")));
+
+    std::vector<std::string> data;
+    data.push_back(addXML(csvCommand,"!"));
+    data.push_back(extractEos(data[0]));
+    commandMap.insert(std::pair<std::string,std::vector<std::string> >(parameter,data));
 }
 
 /**
@@ -104,7 +143,7 @@ void XmlCommandConstructor::addParameter(const std::string &parameter, const std
  */
 std::string XmlCommandConstructor::getXml(int axis,const std::string &parameter) {
 
-    std::string commandString = commandMap.find(parameter)->second;
+    std::string commandString = commandMap.find(parameter)->second[0];
 
     //Remove ! character for commands with no value
     commandString.erase(std::remove(commandString.begin(),commandString.end(),'!'),commandString.end());
@@ -121,7 +160,7 @@ std::string XmlCommandConstructor::getXml(int axis,const std::string &parameter)
 std::string XmlCommandConstructor::getXml(int axis, const std::string &parameter,int val) {
 
     int pos;
-    std::string commandString = commandMap.find(parameter)->second;
+    std::string commandString = commandMap.find(parameter)->second[0];
     std::stringstream inputStringStream;
     inputStringStream << val;
 
@@ -140,7 +179,7 @@ std::string XmlCommandConstructor::getXml(int axis, const std::string &parameter
 std::string XmlCommandConstructor::getXml(int axis, const std::string &parameter,std::string val) {
 
     int pos;
-    std::string commandString = commandMap.find(parameter)->second;
+    std::string commandString = commandMap.find(parameter)->second[0];
 
     while ((pos = commandString.find("!")) != std::string::npos)
         commandString.replace(pos, 1, val);
@@ -148,38 +187,35 @@ std::string XmlCommandConstructor::getXml(int axis, const std::string &parameter
     return appendSlave(axis-1,commandString);
 }
 
-std::string XmlCommandConstructor::getEos(const std::string &xmlString) {
-    int found = -1;
-    std::string result;
-
-
-    int i = strlen(xmlString.c_str());
-
-    while((i>0&&found==-1)||(i<strlen(xmlString.c_str()))){
-        if(found==1){
-            result+=xmlString.c_str()[i];
-        }
-        if(xmlString.c_str()[i]=='/' && found ==-1){
-            found=1;
-            i=i-1;
-            result+=xmlString.c_str()[i];
-        }
-        i+=found;
-    }
-    return result;
-}
 
 std::string XmlCommandConstructor::dumpXml() {
 
-    std::map<std::string,std::string>::iterator iter1;
+    std::map<std::string,std::vector<std::string> >::iterator iter1;
 
     for(iter1 = commandMap.begin(); iter1 != commandMap.end(); ++iter1){
-        printf("%s\n",iter1->second.c_str());
+        printf("%s\n",iter1->second[0].c_str());
     }
 
 
     for(iter1 = inputMap.begin(); iter1 != inputMap.end(); ++iter1){
-        printf("%s\n",iter1->second.c_str());
+        printf("%s\n",iter1->second[0].c_str());
     }
 
+}
+
+std::string XmlCommandConstructor::getEos(const std::string &parameter) {
+    std::map<std::string,std::vector<std::string> >::iterator commandMapIter;
+    std::map<std::string,std::vector<std::string> >::iterator inputMapIter;
+
+    commandMapIter=commandMap.find(parameter);
+    inputMapIter=inputMap.find(parameter);
+
+    if(commandMapIter!=commandMap.end()){
+        return commandMapIter->second[1];
+    }
+
+    if(inputMapIter!=inputMap.end()){
+        return inputMapIter->second[1];
+    }
+    return "";
 }
