@@ -1,9 +1,7 @@
 #include "XmlCommandConstructor.h"
 
 
-
-XmlCommandConstructor::XmlCommandConstructor(const pcsController &ctrl_):ctrl_(ctrl_) {
-
+XmlCommandConstructor::XmlCommandConstructor(pcsController &crtl): ctrl(crtl) {
 }
 
 /**
@@ -23,7 +21,6 @@ std::string XmlCommandConstructor::addXML(const std::string& csvCommand, const s
     while(std::getline(input,xmlElement,',')){
         singleCommand.push_back(xmlElement);
     }
-
     // Last element is the value
     last = singleCommand.end()-1;
 
@@ -44,6 +41,7 @@ std::string XmlCommandConstructor::addXML(const std::string& csvCommand, const s
     }
     //Push into the vector of commands
     //commandMap.insert(std::pair<std::string,std::string>(parameter,xmlCommand));
+
     return xmlCommand;
 }
 
@@ -51,6 +49,7 @@ std::string XmlCommandConstructor::addXML(const std::string& csvCommand, const s
 std::string XmlCommandConstructor::extractEos(const std::string &xmlString) {
     int found = -1;
     std::string result;
+    char subResult[48];
 
 
     int i = strlen(xmlString.c_str());
@@ -66,7 +65,10 @@ std::string XmlCommandConstructor::extractEos(const std::string &xmlString) {
         }
         i+=found;
     }
-    return result;
+
+    sprintf(subResult,"%c%c",result[1],result[2]);
+
+    return subResult;
 }
 
 

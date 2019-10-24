@@ -43,6 +43,7 @@ private:
     double velocity_ ;
     double accel_;
     friend class pcsController;
+    asynStatus status;
 };
 
 #endif //PCSAXIS_H

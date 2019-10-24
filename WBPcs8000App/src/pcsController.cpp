@@ -29,7 +29,6 @@ pcsController::pcsController(const char *portName, int lowLevelPortAddress, int 
     int test;
 
 
-
     //Add portname suffix
     lowLevelPortName = (char*)malloc(strlen(portName)+strlen(MAIN_PORT_SUFFIX)+1);
     streamPortName = (char*)malloc(strlen(portName)+strlen(STREAMS_PORT_SUFFIX)+1);
@@ -51,12 +50,10 @@ pcsController::pcsController(const char *portName, int lowLevelPortAddress, int 
     sprintf(outString_,"");
     writeReadController();
 
-    printf("Debug1: %s\n",inString_);
 
     sprintf(outString_,"%s,%.2f,%d",NAME,VERSION,CODE);
     writeReadController();
 
-    printf("Debug2: %04x\n",inString_[0]);
 
 
     if(strcmp(inString_,"OK"))
@@ -82,51 +79,34 @@ pcsController::pcsController(const char *portName, int lowLevelPortAddress, int 
 
 
 
-    sprintf(outString_,commandConstructor.getXml(1,CLEAR_UDP_CMD).c_str());
-
-    status = pasynOctetSyncIO->setInputEos(pasynUserController_,commandConstructor.getEos(CLEAR_UDP_CMD).c_str(),2);
-
-    status=writeReadController();
-    inString_[0]='\0';
-
-    if (status) {
-        asynPrint(this->pasynUserSelf, ASYN_TRACE_ERROR,
-                  "%s: writeReadController timeout\n",functionName);
-    }
-    sprintf(outString_,commandConstructor.getXml(1,REGISTER_STREAM_PARAM,"phys14").c_str());
-    //pasynOctetSyncIO->setInputEos(pasynUserController_,commandConstructor.getEos(REGISTER_STREAM_PARAM).c_str(),2);
-    status = pasynOctetSyncIO->setInputEos(pasynUserController_,"</>",2);
-    //pasynOctetSyncIO->getInputEos(pasynUserController_,buffer,1024,&test);
-    status=writeReadController();
-
-    if (status) {
-        asynPrint(this->pasynUserSelf, ASYN_TRACE_ERROR,
-                  "%s: writeReadController timeout\n",functionName);
+    for(int i = 0; i < numAxes; i++) {
+        sprintf(outString_, commandConstructor.getXml(i+1, CLEAR_UDP_CMD).c_str());
+        status = pasynOctetSyncIO->setInputEos(pasynUserController_, commandConstructor.getEos(CLEAR_UDP_CMD).c_str(),2);
+        status = writeReadController();
+        if (status) {
+            asynPrint(this->pasynUserSelf, ASYN_TRACE_ERROR,
+                      "%s: writeReadController timeout\n", functionName);
+        }
     }
 
+    pasynUserUDPStream = pasynManager->createAsynUser(0,0);
+    status = pasynManager->connectDevice(pasynUserUDPStream, streamPortName,0);
+    pasynInterface = pasynManager->findInterface(pasynUserUDPStream, asynOctetType, 1);
 
-
-    sprintf(outString_,commandConstructor.getXml(1,START_UDP_CMD).c_str());
-    pasynOctetSyncIO->setInputEos(pasynUserController_,commandConstructor.getEos(START_UDP_CMD).c_str(),2);
-    printf("!!!!!!!!!!!!!!!!%s\n",outString_);
-    status=writeReadController();
-
-    if (status) {
+    if (!pasynInterface) {
         asynPrint(this->pasynUserSelf, ASYN_TRACE_ERROR,
-                  "%s: writeReadController timeout\n",functionName);
+                  "%s: %s interface not supported", functionName, asynCommonType);
+        return;
     }
-    printf("Got %s \n",inString_);
 
-    /*
-    pasynUserUDPStream = pasynManager->createAsynUser(0, 0);
-	status = pasynManager->connectDevice(pasynUserUDPStream, streamPortName, 0);
+    pasynOctet = (asynOctet *) pasynInterface->pinterface;
+    octetPvt=pasynInterface->drvPvt;
 
-    pasynUserUDPStream->drvUser = (void *) this;
 	if (status != asynSuccess) {
 		asynPrint(pasynUserSelf, ASYN_TRACE_ERROR,
                   "%s: cannot connect to UDP\n",functionName);
 		return;
-	}*/
+	}
 
 
     //commandConstructor.dumpXml();
@@ -142,8 +122,14 @@ asynStatus pcsController::poll() {
     size_t nbytes;
     int nreason;
     char buffer[1024];
+    char rxBuffer[65535];
+    size_t nBytesIn;
+    int eomReason;
+    asynStatus status;
 
-    //pasynOctet->read(pasynUserUDPStream->drvUser,pasynUserUDPStream,buffer,1024,&nbytes,&nreason);
+    status = pasynOctet->read(octetPvt, pasynUserUDPStream, rxBuffer, 65535 - 1,
+                              &nBytesIn, &eomReason);
+
 
     return asynSuccess;
 }

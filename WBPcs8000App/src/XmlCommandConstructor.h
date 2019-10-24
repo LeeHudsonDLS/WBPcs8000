@@ -11,8 +11,8 @@
 class pcsController;
 
 class XmlCommandConstructor{
-public:;
-    XmlCommandConstructor(const pcsController& ctrl_);
+public:
+    XmlCommandConstructor(pcsController& crtl);
     void addInputParameter(const std::string& parameter, const std::string& csvCommand,int input);
     void addInputParameter(const std::string& parameter, const std::string& csvCommand);
     std::string getInputXml(int axis, const std::string& parameter);
@@ -30,5 +30,5 @@ private:
     std::string addXML(const std::string& csvCommand, const std::string& val);
     std::string appendSlave(int slave, std::string xml);
     std::string extractEos(const std::string& xmlString);
-    const pcsController& ctrl_;
+    pcsController& ctrl;
 };

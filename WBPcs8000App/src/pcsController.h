@@ -76,7 +76,8 @@ public:
     myData *pmydata;
     asynOctet *pasynOctet;
     XmlCommandConstructor commandConstructor;
-
+    asynInterface* pasynInterface;
+    void* octetPvt;
 
 
 

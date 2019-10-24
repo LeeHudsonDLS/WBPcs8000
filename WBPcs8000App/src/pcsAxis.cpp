@@ -29,13 +29,16 @@ pcsAxis::pcsAxis(pcsController *ctrl, int axisNo)
 
     sprintf(ctrl_->outString_,ctrl_->commandConstructor.getXml(axisNo,SYS_STATE_PARAM,"Ready").c_str());
     ctrl_->writeController();
-    /*
-    sprintf(ctrl_->outString_,ctrl_->commandConstructor.getXml(axisNo,CLEAR_UDP_CMD).c_str());
-    ctrl_->writeController();
+
+
     sprintf(ctrl_->outString_,ctrl_->commandConstructor.getXml(axisNo,REGISTER_STREAM_PARAM,"phys14").c_str());
-    ctrl_->writeController();
+    status = pasynOctetSyncIO->setInputEos(ctrl_->pasynUserController_,ctrl_->commandConstructor.getEos(REGISTER_STREAM_PARAM).c_str(),2);
+    status=ctrl_->writeReadController();
+
+
     sprintf(ctrl_->outString_,ctrl_->commandConstructor.getXml(axisNo,START_UDP_CMD).c_str());
-    ctrl_->writeController();*/
+    pasynOctetSyncIO->setInputEos(ctrl_->pasynUserController_,ctrl_->commandConstructor.getEos(START_UDP_CMD).c_str(),2);
+    status=ctrl_->writeReadController();
 
 
 
