@@ -27,20 +27,6 @@ pcsAxis::pcsAxis(pcsController *ctrl, int axisNo)
     relativeMoveSequencer.setElement("//slave",axisNo-1);
     absoluteMoveSequencer.setElement("//slave",axisNo-1);
 
-    sprintf(ctrl_->outString_,ctrl_->commandConstructor.getXml(axisNo,SYS_STATE_PARAM,"Ready").c_str());
-    ctrl_->writeController();
-
-
-    sprintf(ctrl_->outString_,ctrl_->commandConstructor.getXml(axisNo,REGISTER_STREAM_PARAM,"phys14").c_str());
-    status = pasynOctetSyncIO->setInputEos(ctrl_->pasynUserController_,ctrl_->commandConstructor.getEos(REGISTER_STREAM_PARAM).c_str(),2);
-    status=ctrl_->writeReadController();
-
-
-    sprintf(ctrl_->outString_,ctrl_->commandConstructor.getXml(axisNo,START_UDP_CMD).c_str());
-    pasynOctetSyncIO->setInputEos(ctrl_->pasynUserController_,ctrl_->commandConstructor.getEos(START_UDP_CMD).c_str(),2);
-    status=ctrl_->writeReadController();
-
-
 
 }
 
