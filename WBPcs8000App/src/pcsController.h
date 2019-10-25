@@ -48,12 +48,6 @@
 
 
 #define BUFFER_SIZE 1024
-typedef struct myData {
-    epicsEventId done;
-    asynOctet    *pasynOctet;
-    void         *drvPvt;
-    char         buffer[BUFFER_SIZE];
-}myData;
 
 
 class pcsController
@@ -73,18 +67,29 @@ public:
     void createAsynParams(void);
     pcsAxis *getAxis(asynUser *pasynUser);
     pcsAxis *getAxis(int axisNo);
-    myData *pmydata;
     asynOctet *pasynOctet;
     XmlCommandConstructor commandConstructor;
     asynInterface* pasynInterface;
     void* octetPvt;
 
-
+    typedef struct{
+        unsigned int code;
+        unsigned int slave;
+        unsigned int nData;
+        unsigned long long int pkgIndex;
+        unsigned long long int ts;
+        float minDrag;
+        float maxDrag;
+        float data;
+    }udpPacket;
 
 protected:
     //pcsAxis **pAxes_;    /**< Array of pointers to axis objects */
 
     int PCS_C_FirstParam;
+    asynStatus sendXmlCommand(int axisNo,const std::string& parameter);
+    asynStatus sendXmlCommand(int axisNo,const std::string& parameter, int val);
+    asynStatus sendXmlCommand(int axisNo,const std::string& parameter, std::string val);
     void* drvPtr;
     asynUser *pasynUserUDPStream;
 

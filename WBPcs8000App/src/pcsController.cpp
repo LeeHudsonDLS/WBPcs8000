@@ -19,51 +19,41 @@ pcsController::pcsController(const char *portName, int lowLevelPortAddress, int 
                               0,
                           0),commandConstructor(*this)
 {
-    size_t nwrite;
     asynStatus status;
     static const char *functionName = "pcsController::pcsController";
     createAsynParams();
-    char buffer[1024];
     std::string temp;
-    int a;
-    int test;
-
 
     //Add portname suffix
     lowLevelPortName = (char*)malloc(strlen(portName)+strlen(MAIN_PORT_SUFFIX)+1);
     streamPortName = (char*)malloc(strlen(portName)+strlen(STREAMS_PORT_SUFFIX)+1);
     eventPortName = (char*)malloc(strlen(portName)+strlen(EVENT_PORT_SUFFIX)+1);
-
+    //Set port names
     sprintf(lowLevelPortName,"%s_CTRL",portName);
     sprintf(streamPortName,"%s_UDP",portName);
     sprintf(eventPortName,"%s_TCP",portName);
 
 
-    /* Connect to pcsController controller */
+    /* Connect to pcsController controller via main tcp port */
     status = pasynOctetSyncIO->connect(lowLevelPortName, 0, &pasynUserController_, NULL);
-
     if (status) {
         asynPrint(this->pasynUserSelf, ASYN_TRACE_ERROR,
                   "%s: cannot connect to pcs controller\n",functionName);
     }
+
     // Initial handshaking
     sprintf(outString_,"");
     writeReadController();
-
-
     sprintf(outString_,"%s,%.2f,%d",NAME,VERSION,CODE);
     writeReadController();
 
-
-
-    if(strcmp(inString_,"OK"))
-        status=asynError;
-
-    if (status) {
+    if(strcmp(inString_,"OK")) {
         asynPrint(this->pasynUserSelf, ASYN_TRACE_ERROR,
-                  "%s: Handshake with controller failed\n",functionName);
+                  "%s: Handshake with controller failed\n", functionName);
+        status = asynError;
     }
 
+    //Construct XML commands to be used later on
     //Parameters that do not require a value
     commandConstructor.addParameter(START_UDP_CMD,"udpxmit,start");
     commandConstructor.addParameter(CLEAR_UDP_CMD,"udpxmit,clear");
@@ -73,22 +63,33 @@ pcsController::pcsController(const char *portName, int lowLevelPortAddress, int 
     commandConstructor.addParameter(REGISTER_STREAM_PARAM, "udpxmit,register,stream");  // Set to stream required, eg, phys14
     commandConstructor.addParameter(SYS_STATE_PARAM, "maincontrol,set,sys_state");      // Set to "Ready" to enable drives
 
+    //Inputs where the value is the input pin number
     commandConstructor.addInputParameter(POS_LIMIT_INPUT,GET_INPUT,2);
     commandConstructor.addInputParameter(NEG_LIMIT_INPUT,GET_INPUT,3);
     commandConstructor.addInputParameter(DRV_READY_INPUT,GET_INPUT,1);
 
 
-
+    //Configure UDP streams for all axes
     for(int i = 0; i < numAxes; i++) {
-        sprintf(outString_, commandConstructor.getXml(i+1, CLEAR_UDP_CMD).c_str());
-        status = pasynOctetSyncIO->setInputEos(pasynUserController_, commandConstructor.getEos(CLEAR_UDP_CMD).c_str(),2);
-        status = writeReadController();
+        status = sendXmlCommand(i+1,CLEAR_UDP_CMD);
+        sprintf(outString_,commandConstructor.getXml(i+1,REGISTER_STREAM_PARAM,"phys14").c_str());
+        status = pasynOctetSyncIO->setInputEos(pasynUserController_,commandConstructor.getEos(REGISTER_STREAM_PARAM).c_str(),2);
+        status=writeReadController();
+        sprintf(outString_,commandConstructor.getXml(i+1,SYS_STATE_PARAM,"Ready").c_str());
+        status = pasynOctetSyncIO->setInputEos(pasynUserController_,commandConstructor.getEos(SYS_STATE_PARAM).c_str(),2);
+        writeController();
         if (status) {
             asynPrint(this->pasynUserSelf, ASYN_TRACE_ERROR,
                       "%s: writeReadController timeout\n", functionName);
         }
+
     }
 
+    //Start streams
+    status = sendXmlCommand(1,START_UDP_CMD);
+    status = sendXmlCommand(2,START_UDP_CMD);
+
+    //Configure UDP port
     pasynUserUDPStream = pasynManager->createAsynUser(0,0);
     status = pasynManager->connectDevice(pasynUserUDPStream, streamPortName,0);
     pasynInterface = pasynManager->findInterface(pasynUserUDPStream, asynOctetType, 1);
@@ -108,8 +109,6 @@ pcsController::pcsController(const char *portName, int lowLevelPortAddress, int 
 		return;
 	}
 
-
-    //commandConstructor.dumpXml();
     startPoller(movingPollPeriod, idlePollPeriod, 2);
 
 }
@@ -119,19 +118,58 @@ pcsController::~pcsController() {}
 
 
 asynStatus pcsController::poll() {
-    size_t nbytes;
-    int nreason;
-    char buffer[1024];
     char rxBuffer[65535];
     size_t nBytesIn;
     int eomReason;
+    int packetIndex = 0;
     asynStatus status;
+    udpPacket PACKET;
 
+    //Read UDP Packet
     status = pasynOctet->read(octetPvt, pasynUserUDPStream, rxBuffer, 65535 - 1,
                               &nBytesIn, &eomReason);
 
+    //Manually unpack datagram
+    memcpy(&PACKET.code,&rxBuffer[packetIndex],4);
+    packetIndex+=4;
+    memcpy(&PACKET.slave,&rxBuffer[packetIndex],4);
+    packetIndex+=4;
+    memcpy(&PACKET.nData,&rxBuffer[packetIndex],4);
+    packetIndex+=4;
+    memcpy(&PACKET.pkgIndex,&rxBuffer[packetIndex],8);
+    packetIndex+=8;
+    memcpy(&PACKET.ts,&rxBuffer[packetIndex],8);
+    packetIndex+=8;
+    memcpy(&PACKET.minDrag,&rxBuffer[packetIndex],4);
+    packetIndex+=4;
+    memcpy(&PACKET.maxDrag,&rxBuffer[packetIndex],4);
+    packetIndex+=4;
+    memcpy(&PACKET.data,&rxBuffer[packetIndex],4);
+    packetIndex+=4;
+
+    printf("%u,%u,%u,%llu,%llu,%f,%f,%f\n",PACKET.code,PACKET.slave,PACKET.nData,PACKET.pkgIndex,PACKET.ts,PACKET.minDrag,PACKET.maxDrag,PACKET.data);
 
     return asynSuccess;
+}
+
+
+asynStatus pcsController::sendXmlCommand(int axisNo, const std::string &parameter) {
+    asynStatus status;
+
+    sprintf(outString_, commandConstructor.getXml(axisNo, parameter).c_str());
+    status = pasynOctetSyncIO->setInputEos(pasynUserController_, commandConstructor.getEos(parameter).c_str(),2);
+    if (status != asynSuccess) {
+		asynPrint(pasynUserSelf, ASYN_TRACE_ERROR,
+                  "sendXmlCommand: error setting EOS\n");
+        return status;
+    }
+    status = writeReadController();
+    if (status != asynSuccess) {
+		asynPrint(pasynUserSelf, ASYN_TRACE_ERROR,
+                  "sendXmlCommand: writeReadController error\n");
+        return status;
+    }
+    return status;
 }
 
 void pcsController::createAsynParams(void){
