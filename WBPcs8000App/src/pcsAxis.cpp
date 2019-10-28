@@ -57,7 +57,6 @@ asynStatus pcsAxis::move(double position, int relative, double minVelocity, doub
     absoluteMoveSequencer.setElement("//end_ampl",position);
 
     sprintf(seqBuffer,absoluteMoveSequencer.getXml().c_str());
-    printf(seqBuffer);
     pasynOctetSyncIO->write(ctrl_->pasynUserController_,seqBuffer,strlen(seqBuffer),DEFAULT_CONTROLLER_TIMEOUT,&nwrite);
 
 
@@ -98,7 +97,6 @@ asynStatus pcsAxis::poll(bool *moving) {
  */
 
     setIntegerParam(ctrl_->motorStatusDone_,1);
-    setDoubleParam(ctrl_->motorPosition_,atoi(ctrl_->inString_));
     *moving = false;
     callParamCallbacks();
     return asynSuccess;

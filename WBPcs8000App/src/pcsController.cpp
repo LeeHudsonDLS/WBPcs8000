@@ -7,7 +7,12 @@
 #include <iocsh.h>
 #include <epicsExport.h>
 
+static void udpReadTaskC(void *drvPvt)
+{
+    pcsController *pPvt = (pcsController *)drvPvt;
 
+    pPvt->udpReadTask();
+}
 
 pcsController::pcsController(const char *portName, int lowLevelPortAddress, int numAxes,
                               double movingPollPeriod, double idlePollPeriod)
@@ -20,10 +25,12 @@ pcsController::pcsController(const char *portName, int lowLevelPortAddress, int 
                           0),commandConstructor(*this)
 {
     asynStatus status;
+    int status2;
     static const char *functionName = "pcsController::pcsController";
     createAsynParams();
     std::string temp;
 
+    driverName = "pcsController";
     //Add portname suffix
     lowLevelPortName = (char*)malloc(strlen(portName)+strlen(MAIN_PORT_SUFFIX)+1);
     streamPortName = (char*)malloc(strlen(portName)+strlen(STREAMS_PORT_SUFFIX)+1);
@@ -109,7 +116,17 @@ pcsController::pcsController(const char *portName, int lowLevelPortAddress, int 
 		return;
 	}
 
+
+
     startPoller(movingPollPeriod, idlePollPeriod, 2);
+
+    /* launch image read task */
+    epicsThreadCreate("PointGreyImageTask",
+                      epicsThreadPriorityMedium,
+                      epicsThreadGetStackSize(epicsThreadStackMedium),
+                      udpReadTaskC, this);
+
+    return;
 
 }
 
@@ -118,38 +135,9 @@ pcsController::~pcsController() {}
 
 
 asynStatus pcsController::poll() {
-    char rxBuffer[65535];
-    size_t nBytesIn;
-    int eomReason;
-    int packetIndex = 0;
+    callParamCallbacks();
     asynStatus status;
-    udpPacket PACKET;
 
-    //Read UDP Packet
-    status = pasynOctet->read(octetPvt, pasynUserUDPStream, rxBuffer, 65535 - 1,
-                              &nBytesIn, &eomReason);
-
-    //Manually unpack datagram
-    memcpy(&PACKET.code,&rxBuffer[packetIndex],4);
-    packetIndex+=4;
-    memcpy(&PACKET.slave,&rxBuffer[packetIndex],4);
-    packetIndex+=4;
-    memcpy(&PACKET.nData,&rxBuffer[packetIndex],4);
-    packetIndex+=4;
-    memcpy(&PACKET.pkgIndex,&rxBuffer[packetIndex],8);
-    packetIndex+=8;
-    memcpy(&PACKET.ts,&rxBuffer[packetIndex],8);
-    packetIndex+=8;
-    memcpy(&PACKET.minDrag,&rxBuffer[packetIndex],4);
-    packetIndex+=4;
-    memcpy(&PACKET.maxDrag,&rxBuffer[packetIndex],4);
-    packetIndex+=4;
-    memcpy(&PACKET.data,&rxBuffer[packetIndex],4);
-    packetIndex+=4;
-
-    printf("%u,%u,%u,%llu,%llu,%f,%f,%f\n",PACKET.code,PACKET.slave,PACKET.nData,PACKET.pkgIndex,PACKET.ts,PACKET.minDrag,PACKET.maxDrag,PACKET.data);
-
-    return asynSuccess;
 }
 
 
@@ -196,6 +184,51 @@ pcsAxis* pcsController::getAxis(int axisNo)
 }
 
 
+void pcsController::udpReadTask() {
+
+    char rxBuffer[65535];
+    asynStatus status = asynSuccess;
+    static const char *functionName = "udpReadTask";
+    udpPacket PACKET;
+    size_t nBytesIn;
+    int eomReason;
+    int packetIndex = 0;
+
+    while(1){
+        packetIndex = 0;
+
+        //Read UDP Packet
+        status = pasynOctet->read(octetPvt, pasynUserUDPStream, rxBuffer, 65535 - 1,
+                                  &nBytesIn, &eomReason);
+
+        //Manually unpack datagram
+        memcpy(&PACKET.code,&rxBuffer[packetIndex],4);
+        packetIndex+=4;
+        memcpy(&PACKET.slave,&rxBuffer[packetIndex],4);
+        packetIndex+=4;
+        memcpy(&PACKET.nData,&rxBuffer[packetIndex],4);
+        packetIndex+=4;
+        memcpy(&PACKET.pkgIndex,&rxBuffer[packetIndex],8);
+        packetIndex+=8;
+        memcpy(&PACKET.ts,&rxBuffer[packetIndex],8);
+        packetIndex+=8;
+        memcpy(&PACKET.minDrag,&rxBuffer[packetIndex],4);
+        packetIndex+=4;
+        memcpy(&PACKET.maxDrag,&rxBuffer[packetIndex],4);
+        packetIndex+=4;
+        memcpy(&PACKET.data,&rxBuffer[packetIndex],4);
+        packetIndex+=4;
+
+        if(PACKET.code == POSITION_UDP_STREAM_CODE) {
+            lock();
+            getAxis(PACKET.slave + 1)->setDoubleParam(motorPosition_, PACKET.data);
+            unlock();
+        }
+    }
+
+}
+
+
 /** Configuration command, called directly or from iocsh.
   * \param[in] portName The name of this asyn port.
   * \param[in] serialPortName The name of the serial port connected to the device.
@@ -220,6 +253,10 @@ extern "C" int pcsControllerConfig(const char *portName, int lowLevelPortAddress
     }
     return result;
 }
+
+
+
+
 
 /* Code for iocsh registration for pcsController*/
 static const iocshArg pcsControllerConfigArg0 = {"Port name", iocshArgString};

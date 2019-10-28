@@ -30,6 +30,7 @@
 #define EVENT_PORT_SUFFIX   "_TCP"
 
 
+// Commands
 #define START_UDP_CMD "start_udp_cmd"
 #define CLEAR_UDP_CMD "clear_udp_cmd"
 
@@ -40,6 +41,13 @@
 #define POS_LIMIT_INPUT "pos_limit_input"
 #define NEG_LIMIT_INPUT "neg_limit_input"
 #define DRV_READY_INPUT "drive_ready_input"
+
+// UDP Stream codes
+#define PHYS1_UDP_STREAM_CODE   1
+#define PHYS2_UDP_STREAM_CODE   2
+#define PHYS3_UDP_STREAM_CODE   3
+#define POSITION_UDP_STREAM_CODE 81
+#define VELOCITY_UDP_STREAM_CODE 82
 
 /*
  * Commonly used xml locations in CSV representation to be used directly by the XmlCommandConstructor
@@ -59,9 +67,11 @@ public:
     ~pcsController();
 
     asynStatus poll();
+    void udpReadTask();
     char* lowLevelPortName;
     char* streamPortName;
     char* eventPortName;
+    char* driverName;
     enum OperatingMode {MotorRecord=0, Jog=1};
     enum JogOperation {Stop=0, Forward=1, Reverse=2};
     void createAsynParams(void);
@@ -98,7 +108,8 @@ protected:
 private:
     int initialised_;
     int connected_;
-
+    epicsEventId startEventId;
+    epicsEventId stopEventId;
     friend class pcsAxis;
 
 };
