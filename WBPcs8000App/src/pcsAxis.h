@@ -42,6 +42,7 @@ private:
     Sequencer absoluteMoveSequencer;
     double velocity_ ;
     double accel_;
+    int scale_;
     friend class pcsController;
     asynStatus status;
 };
