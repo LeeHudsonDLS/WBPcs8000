@@ -97,9 +97,11 @@ protected:
     //pcsAxis **pAxes_;    /**< Array of pointers to axis objects */
 
     int PCS_C_FirstParam;
+    template <typename T>
+    asynStatus sendXmlCommand(int axisNo,const std::string& parameter,T value);
     asynStatus sendXmlCommand(int axisNo,const std::string& parameter);
-    asynStatus sendXmlCommand(int axisNo,const std::string& parameter, int val);
-    asynStatus sendXmlCommand(int axisNo,const std::string& parameter, std::string val);
+
+    asynStatus sendXmlCommand(const std::string& eos);
     void* drvPtr;
     asynUser *pasynUserUDPStream;
 

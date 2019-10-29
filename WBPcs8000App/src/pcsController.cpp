@@ -25,10 +25,8 @@ pcsController::pcsController(const char *portName, int lowLevelPortAddress, int 
                           0),commandConstructor(*this)
 {
     asynStatus status;
-    int status2;
     static const char *functionName = "pcsController::pcsController";
     createAsynParams();
-    std::string temp;
 
     driverName = "pcsController";
     //Add portname suffix
@@ -79,22 +77,14 @@ pcsController::pcsController(const char *portName, int lowLevelPortAddress, int 
     //Configure UDP streams for all axes
     for(int i = 0; i < numAxes; i++) {
         status = sendXmlCommand(i+1,CLEAR_UDP_CMD);
-        sprintf(outString_,commandConstructor.getXml(i+1,REGISTER_STREAM_PARAM,"phys14").c_str());
-        status = pasynOctetSyncIO->setInputEos(pasynUserController_,commandConstructor.getEos(REGISTER_STREAM_PARAM).c_str(),2);
-        status=writeReadController();
-        sprintf(outString_,commandConstructor.getXml(i+1,SYS_STATE_PARAM,"Ready").c_str());
-        status = pasynOctetSyncIO->setInputEos(pasynUserController_,commandConstructor.getEos(SYS_STATE_PARAM).c_str(),2);
-        writeController();
-        if (status) {
-            asynPrint(this->pasynUserSelf, ASYN_TRACE_ERROR,
-                      "%s: writeReadController timeout\n", functionName);
-        }
-
+        status = sendXmlCommand(i+1,REGISTER_STREAM_PARAM,"phys14");
+        status = sendXmlCommand(i+1,SYS_STATE_PARAM,"Ready");
     }
 
-    //Start streams
-    status = sendXmlCommand(1,START_UDP_CMD);
-    status = sendXmlCommand(2,START_UDP_CMD);
+    //Start UDP
+    for(int i = 0; i < numAxes; i++) {
+        status = sendXmlCommand(i+1,START_UDP_CMD);
+    }
 
     //Configure UDP port
     pasynUserUDPStream = pasynManager->createAsynUser(0,0);
@@ -116,8 +106,6 @@ pcsController::pcsController(const char *portName, int lowLevelPortAddress, int 
 		return;
 	}
 
-
-
     startPoller(movingPollPeriod, idlePollPeriod, 2);
 
     /* launch image read task */
@@ -133,7 +121,6 @@ pcsController::pcsController(const char *portName, int lowLevelPortAddress, int 
 pcsController::~pcsController() {}
 
 
-
 asynStatus pcsController::poll() {
     callParamCallbacks();
     asynStatus status;
@@ -141,24 +128,6 @@ asynStatus pcsController::poll() {
 }
 
 
-asynStatus pcsController::sendXmlCommand(int axisNo, const std::string &parameter) {
-    asynStatus status;
-
-    sprintf(outString_, commandConstructor.getXml(axisNo, parameter).c_str());
-    status = pasynOctetSyncIO->setInputEos(pasynUserController_, commandConstructor.getEos(parameter).c_str(),2);
-    if (status != asynSuccess) {
-		asynPrint(pasynUserSelf, ASYN_TRACE_ERROR,
-                  "sendXmlCommand: error setting EOS\n");
-        return status;
-    }
-    status = writeReadController();
-    if (status != asynSuccess) {
-		asynPrint(pasynUserSelf, ASYN_TRACE_ERROR,
-                  "sendXmlCommand: writeReadController error\n");
-        return status;
-    }
-    return status;
-}
 
 void pcsController::createAsynParams(void){
   int index = 0;
@@ -193,6 +162,8 @@ void pcsController::udpReadTask() {
     size_t nBytesIn;
     int eomReason;
     int packetIndex = 0;
+    int scale;
+    pcsAxis* pAxis;
 
     while(1){
         packetIndex = 0;
@@ -221,11 +192,44 @@ void pcsController::udpReadTask() {
 
         if(PACKET.code == POSITION_UDP_STREAM_CODE) {
             lock();
-            getAxis(PACKET.slave + 1)->setDoubleParam(motorPosition_, PACKET.data);
+            pAxis = getAxis(PACKET.slave + 1);
+            pAxis->setDoubleParam(motorPosition_, PACKET.data);
             unlock();
         }
     }
 
+}
+
+
+asynStatus pcsController::sendXmlCommand(const std::string& parameter) {
+    asynStatus status;
+    status = pasynOctetSyncIO->setInputEos(pasynUserController_, parameter.c_str(),2);
+    if (status != asynSuccess) {
+        asynPrint(pasynUserSelf, ASYN_TRACE_ERROR,
+                  "sendXmlCommand: error setting EOS\n");
+        return status;
+    }
+    status = writeReadController();
+    if (status != asynSuccess) {
+        asynPrint(pasynUserSelf, ASYN_TRACE_ERROR,
+                  "sendXmlCommand: writeReadController error\n");
+        return status;
+    }
+    return status;
+
+}
+
+template <typename T>
+asynStatus pcsController::sendXmlCommand(int axisNo, const std::string &parameter, T value) {
+
+    sprintf(outString_, commandConstructor.getXml(axisNo, parameter,value).c_str());
+    return sendXmlCommand(commandConstructor.getEos(parameter));
+}
+
+asynStatus pcsController::sendXmlCommand(int axisNo, const std::string &parameter) {
+
+    sprintf(outString_, commandConstructor.getXml(axisNo, parameter).c_str());
+    return sendXmlCommand(commandConstructor.getEos(parameter));
 }
 
 
