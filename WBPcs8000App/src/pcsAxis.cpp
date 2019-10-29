@@ -12,7 +12,8 @@ pcsAxis::pcsAxis(pcsController *ctrl, int axisNo)
         :asynMotorAxis((asynMotorController *) ctrl, axisNo),
         ctrl_(ctrl),
         relativeMoveSequencer(relativeMoveTemplate),
-        absoluteMoveSequencer(absoluteMoveTemplate){
+        absoluteMoveSequencer(absoluteMoveTemplate),
+        scale_(1000){
 
     // Look into MSTA bits for enabling motors
     static const char *functionName = "pcsAxis::pcsAxis";
@@ -23,7 +24,6 @@ pcsAxis::pcsAxis(pcsController *ctrl, int axisNo)
     velocity_ = 0.0;
     accel_ = 0.0;
     initialise(axisNo_);
-
     relativeMoveSequencer.setElement("//slave",axisNo-1);
     absoluteMoveSequencer.setElement("//slave",axisNo-1);
 
@@ -42,7 +42,6 @@ void pcsAxis::initialise(int axisNo) {
 
 }
 
-
 asynStatus pcsAxis::move(double position, int relative, double minVelocity, double maxVelocity, double acceleration){
 
     double distance = 0;
@@ -51,11 +50,9 @@ asynStatus pcsAxis::move(double position, int relative, double minVelocity, doub
     static const char *functionName = "move";
     char seqBuffer[4096];
     printf("pcsAxis::move() called\n");
-
     // Set the velocity
     absoluteMoveSequencer.setElement("//rate",maxVelocity);
-    absoluteMoveSequencer.setElement("//end_ampl",position);
-
+    absoluteMoveSequencer.setElement("//end_ampl",position/scale_);
     sprintf(seqBuffer,absoluteMoveSequencer.getXml().c_str());
     pasynOctetSyncIO->write(ctrl_->pasynUserController_,seqBuffer,strlen(seqBuffer),DEFAULT_CONTROLLER_TIMEOUT,&nwrite);
 
@@ -106,11 +103,6 @@ asynStatus pcsAxis::poll(bool *moving) {
 pcsAxis::~pcsAxis(){
 
 }
-
-
-
-
-
 
 
 
