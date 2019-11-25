@@ -69,6 +69,7 @@ public:
 
     asynStatus poll();
     void udpReadTask();
+    void eventReadTask();
     char* lowLevelPortName;
     char* streamPortName;
     char* eventPortName;
@@ -79,9 +80,12 @@ public:
     pcsAxis *getAxis(asynUser *pasynUser);
     pcsAxis *getAxis(int axisNo);
     asynOctet *pasynOctet;
+    asynOctet *pasynOctetEvent;
     XmlCommandConstructor commandConstructor;
     asynInterface* pasynInterface;
+    asynInterface* pasynInterfaceEvent;
     void* octetPvt;
+    void* octetPvt2;
     int scale;
 
     typedef struct{
@@ -95,6 +99,14 @@ public:
         float data;
     }udpPacket;
 
+    typedef struct{
+        unsigned int ev_code;
+        unsigned int slave;
+        unsigned long long int ts;
+        unsigned int ev_value;
+        unsigned int num_data;
+    }eventPacket;
+
 protected:
     //pcsAxis **pAxes_;    /**< Array of pointers to axis objects */
 
@@ -106,6 +118,7 @@ protected:
     asynStatus sendXmlCommand(const std::string& eos);
     void* drvPtr;
     asynUser *pasynUserUDPStream;
+    asynUser *pasynUserEventStream;
 
 #define FIRST_PCS_PARAM PCS_C_FirstParam
 

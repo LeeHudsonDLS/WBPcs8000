@@ -14,6 +14,13 @@ static void udpReadTaskC(void *drvPvt)
     pPvt->udpReadTask();
 }
 
+static void eventReadTaskC(void *drvPvt)
+{
+    pcsController *pPvt = (pcsController *)drvPvt;
+
+    pPvt->eventReadTask();
+}
+
 pcsController::pcsController(const char *portName, int lowLevelPortAddress, int numAxes,
                               double movingPollPeriod, double idlePollPeriod)
     : asynMotorController(portName, numAxes + 1, NUM_MOTOR_DRIVER_PARAMS + NUM_OF_PCS_PARAMS,
@@ -113,13 +120,41 @@ pcsController::pcsController(const char *portName, int lowLevelPortAddress, int 
 		return;
 	}
 
+
+    //Configure TCP event port
+    pasynUserEventStream = pasynManager->createAsynUser(0,0);
+    status = pasynManager->connectDevice(pasynUserEventStream, eventPortName,0);
+    pasynInterfaceEvent = pasynManager->findInterface(pasynUserEventStream, asynOctetType, 1);
+
+    if (!pasynInterfaceEvent) {
+        asynPrint(this->pasynUserSelf, ASYN_TRACE_ERROR,
+                  "%s: %s interface not supported", functionName, asynCommonType);
+        return;
+    }
+
+    pasynOctetEvent = (asynOctet *) pasynInterfaceEvent->pinterface;
+    octetPvt2=pasynInterfaceEvent->drvPvt;
+
+    if (status != asynSuccess) {
+        asynPrint(pasynUserSelf, ASYN_TRACE_ERROR,
+                  "%s: cannot connect to UDP\n",functionName);
+        return;
+    }
+
+
+
     startPoller(movingPollPeriod, idlePollPeriod, 2);
 
-    /* launch image read task */
-    epicsThreadCreate("PointGreyImageTask",
+
+    epicsThreadCreate("UDPStreamTask",
                       epicsThreadPriorityMedium,
                       epicsThreadGetStackSize(epicsThreadStackMedium),
                       udpReadTaskC, this);
+
+/*    epicsThreadCreate("EventStreamTask",
+                      epicsThreadPriorityMedium,
+                      epicsThreadGetStackSize(epicsThreadStackMedium),
+                      eventReadTaskC, this);*/
 
     return;
 
@@ -201,14 +236,49 @@ void pcsController::udpReadTask() {
             lock();
             pAxis = getAxis(PACKET.slave + 1);
             pAxis->setDoubleParam(motorPosition_, PACKET.data*pAxis->scale_);
-            if(pAxis->axisNo_==2)
-                printf("%f\n",PACKET.data);
             unlock();
         }
     }
 
 }
 
+
+void pcsController::eventReadTask() {
+
+    char rxBuffer[65535];
+    asynStatus status = asynSuccess;
+    static const char *functionName = "udpReadTask";
+    eventPacket PACKET;
+    size_t nBytesIn;
+    int eomReason;
+    int packetIndex = 0;
+    int scale;
+    pcsAxis* pAxis;
+
+    while(1){
+        packetIndex = 0;
+
+        //Read UDP Packet
+        status = pasynOctet->read(octetPvt2, pasynUserEventStream, rxBuffer, 65535 - 1,
+                                  &nBytesIn, &eomReason);
+
+        //Manually unpack datagram
+        memcpy(&PACKET.ev_code,&rxBuffer[packetIndex],4);
+        packetIndex+=4;
+        memcpy(&PACKET.slave,&rxBuffer[packetIndex],4);
+        packetIndex+=4;
+        memcpy(&PACKET.ts,&rxBuffer[packetIndex],8);
+        packetIndex+=8;
+        memcpy(&PACKET.ev_value,&rxBuffer[packetIndex],4);
+        packetIndex+=4;
+        memcpy(&PACKET.num_data,&rxBuffer[packetIndex],4);
+        packetIndex+=4;
+
+        printf("%d\n",PACKET.ev_code);
+
+    }
+
+}
 
 asynStatus pcsController::sendXmlCommand(const std::string& parameter) {
     asynStatus status;
