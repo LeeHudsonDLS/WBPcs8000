@@ -12,13 +12,13 @@ pcsAxis::pcsAxis(pcsController *ctrl, int axisNo)
         :asynMotorAxis((asynMotorController *) ctrl, axisNo),
         ctrl_(ctrl),
         relativeMoveSequencer(relativeMoveTemplate),
-        absoluteMoveSequencer(absoluteMoveTemplate),
-        scale_(1000){
+        absoluteMoveSequencer(absoluteMoveTemplate){
 
     // Look into MSTA bits for enabling motors
     static const char *functionName = "pcsAxis::pcsAxis";
     asynPrint(ctrl_->pasynUserSelf, ASYN_TRACE_FLOW, "%s\r",functionName);
 
+    scale_=ctrl_->scale;
     std::string file_path = __FILE__;
     //Initialize non-static data members
     velocity_ = 0.0;
@@ -26,7 +26,9 @@ pcsAxis::pcsAxis(pcsController *ctrl, int axisNo)
     initialise(axisNo_);
     relativeMoveSequencer.setElement("//slave",axisNo-1);
     absoluteMoveSequencer.setElement("//slave",axisNo-1);
-
+    setIntegerParam(ctrl_->motorStatusMoving_, false);
+    setIntegerParam(ctrl_->motorStatusDone_,1);
+    callParamCallbacks();
 
 }
 
@@ -49,24 +51,24 @@ asynStatus pcsAxis::move(double position, int relative, double minVelocity, doub
     asynStatus status = asynError;
     static const char *functionName = "move";
     char seqBuffer[4096];
+    double resolution;
     printf("pcsAxis::move(%f) called\n",position);
+
+
     // Set the velocity
-    absoluteMoveSequencer.setElement("//rate",maxVelocity/1000);
-    absoluteMoveSequencer.setElement("//end_ampl",position/1000);
-    printf(absoluteMoveSequencer.getXml().c_str());
+    absoluteMoveSequencer.setElement("//rate",maxVelocity/scale_);
+    absoluteMoveSequencer.setElement("//end_ampl",position/scale_);
     sprintf(seqBuffer,absoluteMoveSequencer.getXml().c_str());
     pasynOctetSyncIO->write(ctrl_->pasynUserController_,seqBuffer,strlen(seqBuffer),DEFAULT_CONTROLLER_TIMEOUT,&nwrite);
 
 
     sprintf(ctrl_->outString_,ctrl_->commandConstructor.getXml(axisNo_,SEQ_CONTROL_PARAM,"Program").c_str());
-    printf("Command Size = %d\n",strlen(ctrl_->outString_));
     ctrl_->writeController();
 
     asynPrint(ctrl_->pasynUserSelf, ASYN_TRACE_FLOW, "%s\n", functionName);
+    setIntegerParam(ctrl_->motorStatusDone_,1);
 
-
-    setIntegerParam(ctrl_->motorStatusMoving_, false);
-    // ctrl_->wakeupPoller();
+    ctrl_->wakeupPoller();
     return asynSuccess;
 }
 asynStatus pcsAxis::moveVelocity(double minVelocity,double maxVelocity, double acceleration){
@@ -88,15 +90,23 @@ asynStatus pcsAxis::setPosition(double position){
 
 asynStatus pcsAxis::poll(bool *moving) {
 
+    setIntegerParam(ctrl_->motorStatusDone_,1);
+    *moving = false;
+    callParamCallbacks();
+    /*
+    int motorMovingStore;
+    ctrl_->getIntegerParam(ctrl_->motorStatusMoving_,&motorMovingStore);
+    if(motorMovingStore)
+        *moving = true;
+    else
+        *moving = false;
+    */
 /*
 
     sprintf(ctrl_->outString_,"#%dp\r",axisNo_);
     ctrl_->writeReadController();
  */
 
-    setIntegerParam(ctrl_->motorStatusDone_,1);
-    *moving = false;
-    callParamCallbacks();
     return asynSuccess;
 
 }

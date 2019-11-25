@@ -22,11 +22,16 @@ pcsController::pcsController(const char *portName, int lowLevelPortAddress, int 
                               ASYN_CANBLOCK | ASYN_MULTIDEVICE,
                           1, // autoconnect
                               0,
-                          0),commandConstructor(*this)
+                          0),
+                          commandConstructor(*this),
+                          scale(AXIS_SCALE_FACTOR)
 {
+
+    pcsAxis* pAxis;
     asynStatus status;
     static const char *functionName = "pcsController::pcsController";
     createAsynParams();
+
 
     driverName = "pcsController";
     //Add portname suffix
@@ -74,7 +79,7 @@ pcsController::pcsController(const char *portName, int lowLevelPortAddress, int 
     commandConstructor.addInputParameter(DRV_READY_INPUT,GET_INPUT,1);
 
 
-    //Configure UDP streams for all axes
+    //Configure UDP streams and generic parameters for all axes
     for(int i = 0; i < numAxes; i++) {
         status = sendXmlCommand(i+1,CLEAR_UDP_CMD);
         status = sendXmlCommand(i+1,REGISTER_STREAM_PARAM,"phys14");
@@ -195,7 +200,9 @@ void pcsController::udpReadTask() {
         if(PACKET.code == POSITION_UDP_STREAM_CODE) {
             lock();
             pAxis = getAxis(PACKET.slave + 1);
-            pAxis->setDoubleParam(motorPosition_, PACKET.data*1000);
+            pAxis->setDoubleParam(motorPosition_, PACKET.data*pAxis->scale_);
+            if(pAxis->axisNo_==2)
+                printf("%f\n",PACKET.data);
             unlock();
         }
     }

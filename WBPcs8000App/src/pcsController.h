@@ -56,6 +56,7 @@
 
 
 #define BUFFER_SIZE 1024
+#define AXIS_SCALE_FACTOR 1000
 
 
 class pcsController
@@ -81,6 +82,7 @@ public:
     XmlCommandConstructor commandConstructor;
     asynInterface* pasynInterface;
     void* octetPvt;
+    int scale;
 
     typedef struct{
         unsigned int code;

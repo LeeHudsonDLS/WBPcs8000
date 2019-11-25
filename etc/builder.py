@@ -61,7 +61,7 @@ class pcsAxis(Device):
 
 
     # Constructor, just store parameters
-    def __init__(self, CONTROLLER, AXIS_NO,P,M,ADDR,DESC,MRES,VELO,PREC,EGU,TWV, **args):
+    def __init__(self, CONTROLLER, AXIS_NO,P,M,ADDR,DESC,VELO,PREC,EGU,TWV, **args):
         Device.__init__(self)
         self.CONTROLLER = CONTROLLER
         self.AXIS_NO = AXIS_NO
@@ -69,12 +69,11 @@ class pcsAxis(Device):
         self.M = M
         self.ADDR = ADDR
         self.DESC = DESC
-        self.MRES = MRES
         self.VELO = VELO
         self.PREC = PREC
         self.EGU = EGU
         self.TWV = TWV
-        _dls_pcs_asyn_motor(P=self.P,M=self.M,PORT=self.CONTROLLER,ADDR=self.ADDR,DESC=self.DESC,MRES=self.MRES,VELO=self.VELO,PREC=self.PREC,EGU=self.EGU,TWV=self.TWV)
+        _dls_pcs_asyn_motor(P=self.P,M=self.M,PORT=self.CONTROLLER,ADDR=self.ADDR,DESC=self.DESC,MRES=0.001,VELO=self.VELO,PREC=self.PREC,EGU=self.EGU,TWV=self.TWV)
     # Once per instantiation
     def Initialise(self):
         print "# Configure Walter and Bai PCS8000 Axis"
@@ -89,7 +88,6 @@ class pcsAxis(Device):
                           M = Simple("Axis number", str),
                           ADDR = Simple("Axis number", int),
                           DESC = Simple("Axis number", str),
-                          MRES = Simple("Axis number", float),
                           VELO = Simple("Axis number", float),
                           PREC = Simple("Axis number", int),
                           EGU = Simple("Axis number", str),
