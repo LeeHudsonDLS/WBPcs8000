@@ -49,10 +49,11 @@ asynStatus pcsAxis::move(double position, int relative, double minVelocity, doub
     asynStatus status = asynError;
     static const char *functionName = "move";
     char seqBuffer[4096];
-    printf("pcsAxis::move() called\n");
+    printf("pcsAxis::move(%f) called\n",position);
     // Set the velocity
-    absoluteMoveSequencer.setElement("//rate",maxVelocity);
-    absoluteMoveSequencer.setElement("//end_ampl",position/scale_);
+    absoluteMoveSequencer.setElement("//rate",maxVelocity/1000);
+    absoluteMoveSequencer.setElement("//end_ampl",position/1000);
+    printf(absoluteMoveSequencer.getXml().c_str());
     sprintf(seqBuffer,absoluteMoveSequencer.getXml().c_str());
     pasynOctetSyncIO->write(ctrl_->pasynUserController_,seqBuffer,strlen(seqBuffer),DEFAULT_CONTROLLER_TIMEOUT,&nwrite);
 

@@ -78,6 +78,8 @@ pcsController::pcsController(const char *portName, int lowLevelPortAddress, int 
     for(int i = 0; i < numAxes; i++) {
         status = sendXmlCommand(i+1,CLEAR_UDP_CMD);
         status = sendXmlCommand(i+1,REGISTER_STREAM_PARAM,"phys14");
+
+        // Enable motor
         status = sendXmlCommand(i+1,SYS_STATE_PARAM,"Ready");
     }
 
@@ -193,7 +195,7 @@ void pcsController::udpReadTask() {
         if(PACKET.code == POSITION_UDP_STREAM_CODE) {
             lock();
             pAxis = getAxis(PACKET.slave + 1);
-            pAxis->setDoubleParam(motorPosition_, PACKET.data);
+            pAxis->setDoubleParam(motorPosition_, PACKET.data*1000);
             unlock();
         }
     }
