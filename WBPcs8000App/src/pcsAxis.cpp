@@ -90,8 +90,8 @@ asynStatus pcsAxis::setPosition(double position){
 
 asynStatus pcsAxis::poll(bool *moving) {
 
-    setIntegerParam(ctrl_->motorStatusDone_,1);
-    *moving = false;
+    //setIntegerParam(ctrl_->motorStatusDone_,1);
+    //*moving = false;
     callParamCallbacks();
     /*
     int motorMovingStore;
