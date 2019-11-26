@@ -151,10 +151,10 @@ pcsController::pcsController(const char *portName, int lowLevelPortAddress, int 
                       epicsThreadGetStackSize(epicsThreadStackMedium),
                       udpReadTaskC, this);
 
-/*    epicsThreadCreate("EventStreamTask",
+    epicsThreadCreate("EventStreamTask",
                       epicsThreadPriorityMedium,
                       epicsThreadGetStackSize(epicsThreadStackMedium),
-                      eventReadTaskC, this);*/
+                      eventReadTaskC, this);
 
     return;
 
@@ -214,29 +214,31 @@ void pcsController::udpReadTask() {
         status = pasynOctet->read(octetPvt, pasynUserUDPStream, rxBuffer, 65535 - 1,
                                   &nBytesIn, &eomReason);
 
-        //Manually unpack datagram
-        memcpy(&PACKET.code,&rxBuffer[packetIndex],4);
-        packetIndex+=4;
-        memcpy(&PACKET.slave,&rxBuffer[packetIndex],4);
-        packetIndex+=4;
-        memcpy(&PACKET.nData,&rxBuffer[packetIndex],4);
-        packetIndex+=4;
-        memcpy(&PACKET.pkgIndex,&rxBuffer[packetIndex],8);
-        packetIndex+=8;
-        memcpy(&PACKET.ts,&rxBuffer[packetIndex],8);
-        packetIndex+=8;
-        memcpy(&PACKET.minDrag,&rxBuffer[packetIndex],4);
-        packetIndex+=4;
-        memcpy(&PACKET.maxDrag,&rxBuffer[packetIndex],4);
-        packetIndex+=4;
-        memcpy(&PACKET.data,&rxBuffer[packetIndex],4);
-        packetIndex+=4;
+        if(nBytesIn>0) {
+            //Manually unpack datagram
+            memcpy(&PACKET.code, &rxBuffer[packetIndex], 4);
+            packetIndex += 4;
+            memcpy(&PACKET.slave, &rxBuffer[packetIndex], 4);
+            packetIndex += 4;
+            memcpy(&PACKET.nData, &rxBuffer[packetIndex], 4);
+            packetIndex += 4;
+            memcpy(&PACKET.pkgIndex, &rxBuffer[packetIndex], 8);
+            packetIndex += 8;
+            memcpy(&PACKET.ts, &rxBuffer[packetIndex], 8);
+            packetIndex += 8;
+            memcpy(&PACKET.minDrag, &rxBuffer[packetIndex], 4);
+            packetIndex += 4;
+            memcpy(&PACKET.maxDrag, &rxBuffer[packetIndex], 4);
+            packetIndex += 4;
+            memcpy(&PACKET.data, &rxBuffer[packetIndex], 4);
+            packetIndex += 4;
 
-        if(PACKET.code == POSITION_UDP_STREAM_CODE) {
-            lock();
-            pAxis = getAxis(PACKET.slave + 1);
-            pAxis->setDoubleParam(motorPosition_, PACKET.data*pAxis->scale_);
-            unlock();
+            if (PACKET.code == POSITION_UDP_STREAM_CODE) {
+                lock();
+                pAxis = getAxis(PACKET.slave + 1);
+                pAxis->setDoubleParam(motorPosition_, PACKET.data * pAxis->scale_);
+                unlock();
+            }
         }
     }
 
@@ -247,7 +249,7 @@ void pcsController::eventReadTask() {
 
     char rxBuffer[65535];
     asynStatus status = asynSuccess;
-    static const char *functionName = "udpReadTask";
+    static const char *functionName = "eventReadTask";
     eventPacket PACKET;
     size_t nBytesIn;
     int eomReason;
@@ -259,22 +261,25 @@ void pcsController::eventReadTask() {
         packetIndex = 0;
 
         //Read UDP Packet
-        status = pasynOctet->read(octetPvt2, pasynUserEventStream, rxBuffer, 65535 - 1,
+        status = pasynOctetEvent->flush(octetPvt2,pasynUserEventStream);
+        status = pasynOctetEvent->read(octetPvt2, pasynUserEventStream, rxBuffer, 65535 - 1,
                                   &nBytesIn, &eomReason);
 
-        //Manually unpack datagram
-        memcpy(&PACKET.ev_code,&rxBuffer[packetIndex],4);
-        packetIndex+=4;
-        memcpy(&PACKET.slave,&rxBuffer[packetIndex],4);
-        packetIndex+=4;
-        memcpy(&PACKET.ts,&rxBuffer[packetIndex],8);
-        packetIndex+=8;
-        memcpy(&PACKET.ev_value,&rxBuffer[packetIndex],4);
-        packetIndex+=4;
-        memcpy(&PACKET.num_data,&rxBuffer[packetIndex],4);
-        packetIndex+=4;
 
-        printf("%d\n",PACKET.ev_code);
+        if(nBytesIn>0) {
+            printf("Event!!\n");
+            //Manually unpack datagram
+            memcpy(&PACKET.ev_code, &rxBuffer[packetIndex], 4);
+            packetIndex += 4;
+            memcpy(&PACKET.slave, &rxBuffer[packetIndex], 4);
+            packetIndex += 4;
+            memcpy(&PACKET.ts, &rxBuffer[packetIndex], 8);
+            packetIndex += 8;
+            memcpy(&PACKET.ev_value, &rxBuffer[packetIndex], 4);
+            packetIndex += 4;
+            memcpy(&PACKET.num_data, &rxBuffer[packetIndex], 4);
+            packetIndex += 4;
+        }
 
     }
 
