@@ -6,6 +6,8 @@
 #include <asynOctetSyncIO.h>
 #include <iocsh.h>
 #include <epicsExport.h>
+#include <cantProceed.h>
+#include <epicsString.h>
 
 static void udpReadTaskC(void *drvPvt)
 {
@@ -31,7 +33,8 @@ pcsController::pcsController(const char *portName, int lowLevelPortAddress, int 
                               0,
                           0),
                           commandConstructor(*this),
-                          scale(AXIS_SCALE_FACTOR)
+                          scale(AXIS_SCALE_FACTOR),
+                          addr(0)
 {
 
     pcsAxis* pAxis;
@@ -121,27 +124,35 @@ pcsController::pcsController(const char *portName, int lowLevelPortAddress, int 
 	}
 
 
-    //Configure TCP event port
-    pasynUserEventStream = pasynManager->createAsynUser(0,0);
-    status = pasynManager->connectDevice(pasynUserEventStream, eventPortName,0);
-    pasynInterfaceEvent = pasynManager->findInterface(pasynUserEventStream, asynOctetType, 1);
-
-    if (!pasynInterfaceEvent) {
-        asynPrint(this->pasynUserSelf, ASYN_TRACE_ERROR,
-                  "%s: %s interface not supported", functionName, asynCommonType);
+	// TCP server
+    pPvt = (myData *)callocMustSucceed(1, sizeof(myData), "ipEchoServer");
+    pPvt->mutexId = epicsMutexCreate();
+    pPvt->portName = epicsStrDup(eventPortName);
+    pasynUser = pasynManager->createAsynUser(0,0);
+    pasynUser->userPvt = pPvt;
+    status = pasynManager->connectDevice(pasynUser,eventPortName,addr);
+    if(status!=asynSuccess) {
+        printf("can't connect to port %s: %s\n", eventPortName, pasynUser->errorMessage);
+        return;
+    }
+    pasynInterfaceEvent = pasynManager->findInterface(
+        pasynUser,asynOctetType,1);
+    if(!pasynInterfaceEvent) {
+        printf("%s driver not supported\n",asynOctetType);
         return;
     }
 
-    pasynOctetEvent = (asynOctet *) pasynInterfaceEvent->pinterface;
-    octetPvt2=pasynInterfaceEvent->drvPvt;
+    pPvt->readTimeout = -1.0;
 
-    if (status != asynSuccess) {
-        asynPrint(pasynUserSelf, ASYN_TRACE_ERROR,
-                  "%s: cannot connect to UDP\n",functionName);
-        return;
+    pPvt->pasynOctet = (asynOctet *)pasynInterfaceEvent->pinterface;
+    pPvt->octetPvt = pasynInterfaceEvent->drvPvt;
+    status = pPvt->pasynOctet->registerInterruptUser(
+                 pPvt->octetPvt, pasynUser,
+                 connectionCallback,pPvt,&pPvt->registrarPvt);
+    if(status!=asynSuccess) {
+        printf("ipEchoServer devAsynOctet registerInterruptUser %s\n",
+               pasynUser->errorMessage);
     }
-
-
 
     startPoller(movingPollPeriod, idlePollPeriod, 2);
 
@@ -151,16 +162,109 @@ pcsController::pcsController(const char *portName, int lowLevelPortAddress, int 
                       epicsThreadGetStackSize(epicsThreadStackMedium),
                       udpReadTaskC, this);
 
-    epicsThreadCreate("EventStreamTask",
+    /*epicsThreadCreate("EventStreamTask",
                       epicsThreadPriorityMedium,
                       epicsThreadGetStackSize(epicsThreadStackMedium),
-                      eventReadTaskC, this);
+                      eventReadTaskC, this);*/
 
     return;
 
 }
 
 pcsController::~pcsController() {}
+
+
+void pcsController::echoListener(pcsController::myData *pPvt) {
+    asynUser *pasynUser;
+    char buffer[1024];
+    char rxBuffer[1024];
+    size_t nread, nwrite;
+    int eomReason;
+    int packetIndex;
+    asynStatus status;
+    eventPacket PACKET;
+    asynOctet *pasynOctet;
+
+    printf("asyn client registerd: %s\n",pPvt->portName);
+    status = pasynOctetSyncIO->connect(pPvt->portName, 0, &pasynUser, NULL);
+    if (status) {
+        asynPrint(pasynUser, ASYN_TRACE_ERROR,
+                  "echoListener: unable to connect to port %s\n",
+                  pPvt->portName);
+        return;
+    }
+    status = pasynOctetSyncIO->setInputEos(pasynUser, "\r\n", 2);
+    if (status) {
+        asynPrint(pasynUser, ASYN_TRACE_ERROR,
+                  "echoListener: unable to set input EOS on %s: %s\n",
+                  pPvt->portName, pasynUser->errorMessage);
+        return;
+    }
+    status = pasynOctetSyncIO->setOutputEos(pasynUser, "\r\n", 2);
+    if (status) {
+        asynPrint(pasynUser, ASYN_TRACE_ERROR,
+                  "echoListener: unable to set output EOS on %s: %s\n",
+                  pPvt->portName, pasynUser->errorMessage);
+        return;
+    }
+
+
+    pasynOctetSyncIO->write(pasynUser,"HELLO\n",sizeof("HELLO\n"),2,&nwrite);
+    pasynOctetSyncIO->read(pasynUser,buffer,1024,2.0,&nread,&eomReason);
+    pasynOctetSyncIO->write(pasynUser,"OK\n",sizeof("OK\n"),2,&nwrite);
+    printf("Got: %s\n",buffer);
+
+    while(1) {
+        packetIndex = 0;
+
+        pasynOctetSyncIO->read(pasynUser,buffer,1024,0.1,&nread,&eomReason);
+
+        printf("%s : nread : %d\n",pPvt->portName,nread);
+
+        if(nread>0) {
+            printf("Event!!\n");
+            //Manually unpack datagram
+            memcpy(&PACKET.ev_code, &rxBuffer[packetIndex], 4);
+            packetIndex += 4;
+            memcpy(&PACKET.slave, &rxBuffer[packetIndex], 4);
+            packetIndex += 4;
+            memcpy(&PACKET.ts, &rxBuffer[packetIndex], 8);
+            packetIndex += 8;
+            memcpy(&PACKET.ev_value, &rxBuffer[packetIndex], 4);
+            packetIndex += 4;
+            memcpy(&PACKET.num_data, &rxBuffer[packetIndex], 4);
+            packetIndex += 4;
+            printf("Server %u,%u,%llu,%u,%u\n",PACKET.ev_code,PACKET.slave,PACKET.ts,PACKET.ev_value,PACKET.num_data);
+        }
+
+    }
+
+}
+
+void pcsController::connectionCallback(void *drvPvt, asynUser *pasynUser, char *portName, size_t len, int eomReason) {
+
+    myData  *pPvt = (myData *)drvPvt;
+    myData *newPvt = (myData*)calloc(1, sizeof(myData));
+    size_t bytes;
+    int nreason;
+    char buffer[10240];
+
+
+
+    asynPrint(pasynUser, ASYN_TRACE_FLOW,
+              "ipEchoServer: connectionCallback, portName=%s\n", portName);
+    printf("TCP  connection callback");
+    epicsMutexLock(pPvt->mutexId);
+    /* Make a copy of myData, with new portName */
+    *newPvt = *pPvt;
+    epicsMutexUnlock(pPvt->mutexId);
+    newPvt->portName = epicsStrDup(portName);
+    /* Create a new thread to communicate with this port */
+    epicsThreadCreate(pPvt->portName,
+                      epicsThreadPriorityMedium,
+                      epicsThreadGetStackSize(epicsThreadStackSmall),
+                      (EPICSTHREADFUNC)echoListener, newPvt);
+}
 
 
 asynStatus pcsController::poll() {

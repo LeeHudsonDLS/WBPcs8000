@@ -57,7 +57,8 @@
 
 #define BUFFER_SIZE 1024
 #define AXIS_SCALE_FACTOR 1000
-
+#define MESSAGE_SIZE 80
+#define WRITE_TIMEOUT 2.0
 
 class pcsController
         : public asynMotorController {
@@ -67,26 +68,6 @@ public:
                   double idlePollPeriod);
     ~pcsController();
 
-    asynStatus poll();
-    void udpReadTask();
-    void eventReadTask();
-    char* lowLevelPortName;
-    char* streamPortName;
-    char* eventPortName;
-    char* driverName;
-    enum OperatingMode {MotorRecord=0, Jog=1};
-    enum JogOperation {Stop=0, Forward=1, Reverse=2};
-    void createAsynParams(void);
-    pcsAxis *getAxis(asynUser *pasynUser);
-    pcsAxis *getAxis(int axisNo);
-    asynOctet *pasynOctet;
-    asynOctet *pasynOctetEvent;
-    XmlCommandConstructor commandConstructor;
-    asynInterface* pasynInterface;
-    asynInterface* pasynInterfaceEvent;
-    void* octetPvt;
-    void* octetPvt2;
-    int scale;
 
     typedef struct{
         unsigned int code;
@@ -107,6 +88,41 @@ public:
         unsigned int num_data;
     }eventPacket;
 
+    typedef struct myData {
+        epicsMutexId mutexId;
+        char         *portName;
+        double       readTimeout;
+        asynOctet    *pasynOctet;
+        void         *octetPvt;
+        void         *registrarPvt;
+    }myData;
+
+
+    asynStatus poll();
+    void udpReadTask();
+    void eventReadTask();
+    static void connectionCallback(void *drvPvt, asynUser *pasynUser, char *portName,
+                               size_t len, int eomReason);
+    static void echoListener(myData *pPvt);
+    char* lowLevelPortName;
+    char* streamPortName;
+    char* eventPortName;
+    char* driverName;
+    enum OperatingMode {MotorRecord=0, Jog=1};
+    enum JogOperation {Stop=0, Forward=1, Reverse=2};
+    void createAsynParams(void);
+    pcsAxis *getAxis(asynUser *pasynUser);
+    pcsAxis *getAxis(int axisNo);
+    asynOctet *pasynOctet;
+    asynOctet *pasynOctetEvent;
+    XmlCommandConstructor commandConstructor;
+    asynInterface* pasynInterface;
+    void* octetPvt;
+    void* octetPvt2;
+    int scale;
+
+
+
 protected:
     //pcsAxis **pAxes_;    /**< Array of pointers to axis objects */
 
@@ -116,9 +132,15 @@ protected:
     asynStatus sendXmlCommand(int axisNo,const std::string& parameter);
 
     asynStatus sendXmlCommand(const std::string& eos);
-    void* drvPtr;
     asynUser *pasynUserUDPStream;
+
+
+    // For TCP event server
+    myData        *pPvt;
+    asynUser      *pasynUser;
     asynUser *pasynUserEventStream;
+    asynInterface* pasynInterfaceEvent;
+    int           addr;
 
 #define FIRST_PCS_PARAM PCS_C_FirstParam
 
