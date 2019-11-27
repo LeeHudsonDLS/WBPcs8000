@@ -149,6 +149,7 @@ pcsController::pcsController(const char *portName, int lowLevelPortAddress, int 
     status = pPvt->pasynOctet->registerInterruptUser(
                  pPvt->octetPvt, pasynUser,
                  connectionCallback,pPvt,&pPvt->registrarPvt);
+
     if(status!=asynSuccess) {
         printf("ipEchoServer devAsynOctet registerInterruptUser %s\n",
                pasynUser->errorMessage);
@@ -172,7 +173,6 @@ pcsController::pcsController(const char *portName, int lowLevelPortAddress, int 
 }
 
 pcsController::~pcsController() {}
-
 
 void pcsController::echoListener(pcsController::myData *pPvt) {
     asynUser *pasynUser;
@@ -208,21 +208,21 @@ void pcsController::echoListener(pcsController::myData *pPvt) {
         return;
     }
 
-
     pasynOctetSyncIO->write(pasynUser,"HELLO\n",sizeof("HELLO\n"),2,&nwrite);
     pasynOctetSyncIO->read(pasynUser,buffer,1024,2.0,&nread,&eomReason);
     pasynOctetSyncIO->write(pasynUser,"OK\n",sizeof("OK\n"),2,&nwrite);
     printf("Got: %s\n",buffer);
 
+
+    pasynUser->timeout=0.1;
+
     while(1) {
         packetIndex = 0;
-
-        pasynOctetSyncIO->read(pasynUser,buffer,1024,0.1,&nread,&eomReason);
-
-        printf("%s : nread : %d\n",pPvt->portName,nread);
+        pasynOctetSyncIO->read(pasynUser,rxBuffer,1024,0.1,&nread,&eomReason);
+        //printf("%s : nread : %d\n",pPvt->portName,nread);
 
         if(nread>0) {
-            printf("Event!!\n");
+            printf("Event!! %d\n",nread);
             //Manually unpack datagram
             memcpy(&PACKET.ev_code, &rxBuffer[packetIndex], 4);
             packetIndex += 4;
