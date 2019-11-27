@@ -140,14 +140,12 @@ private:
     friend class pcsAxis;
 
     asynStatus configureServer(const char* portname, myData *&pPvt, asynUser *&pasynUser, asynInterface *&pasynInterface);
-    asynStatus configureUDPStream();
     asynUser *pasynUserUDPStream;
     asynOctet *pasynOctet;
     asynInterface* pasynInterface;
     myData *pStreamPvt;
 
     // For TCP event server
-    asynStatus configureEventStream();
     asynUser *pasynUserEventStream;
     asynInterface* pasynInterfaceEvent;
     myData *pEventPvt;

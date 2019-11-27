@@ -94,17 +94,14 @@ pcsController::pcsController(const char *portName, int lowLevelPortAddress, int 
         status = sendXmlCommand(i+1,START_UDP_CMD);
     }
 
+
     // Configure asyn for udp sensor stream
-    configureUDPStream();
-
-    // Configure asyn for tcp event stream
-    //configureEventStream();
-
-
-
     configureServer(streamPortName,*&pStreamPvt,*&pasynUserUDPStream,*&pasynInterface);
 
+    // Configure asyn for tcp event stream
     configureServer(eventPortName,*&pEventPvt,*&pasynUserEventStream,*&pasynInterfaceEvent);
+
+    // Register interrupts on tcp server to allow action to be taken when client connects
     status = pEventPvt->pasynOctet->registerInterruptUser(
             pEventPvt->octetPvt, pasynUserEventStream,
             connectionCallback,pEventPvt,&pEventPvt->registrarPvt);
@@ -120,6 +117,8 @@ pcsController::pcsController(const char *portName, int lowLevelPortAddress, int 
                       epicsThreadPriorityMedium,
                       epicsThreadGetStackSize(epicsThreadStackMedium),
                       udpReadTaskC, this);
+
+
 
     return;
 }
@@ -156,30 +155,6 @@ asynStatus pcsController::configureServer(const char *portname, myData *&pPvt, a
 
 }
 
-asynStatus pcsController::configureUDPStream() {
-    asynStatus status;
-    static const char *functionName = "pcsController::configureUDPStream";
-
-    pasynUserUDPStream = pasynManager->createAsynUser(0,0);
-    status = pasynManager->connectDevice(pasynUserUDPStream, streamPortName,0);
-    pasynInterface = pasynManager->findInterface(pasynUserUDPStream, asynOctetType, 1);
-
-    if (!pasynInterface) {
-        asynPrint(this->pasynUserSelf, ASYN_TRACE_ERROR,
-                  "%s: %s interface not supported", functionName, asynCommonType);
-        return asynError;
-    }
-
-    pasynOctet = (asynOctet *) pasynInterface->pinterface;
-    octetPvt=pasynInterface->drvPvt;
-
-    if (status != asynSuccess) {
-        asynPrint(pasynUserSelf, ASYN_TRACE_ERROR,
-                  "%s: cannot connect to UDP\n",functionName);
-        return asynError ;
-    }
-    return status;
-}
 
 void pcsController::echoListener(pcsController::myData *pPvt) {
     asynUser *pasynUser;
@@ -323,7 +298,6 @@ void pcsController::udpReadTask() {
 
         //Read UDP Packet
         status = pStreamPvt->pasynOctet->read(pStreamPvt->octetPvt,pasynUserUDPStream,rxBuffer,65535-1,&nBytesIn,&eomReason);
-        //status = pasynOctet->read(octetPvt, pasynUserUDPStream, rxBuffer, 65535 - 1,&nBytesIn, &eomReason);
 
         if(nBytesIn>0) {
             //Manually unpack datagram
