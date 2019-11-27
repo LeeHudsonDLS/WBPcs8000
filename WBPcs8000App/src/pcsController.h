@@ -100,7 +100,6 @@ public:
 
     asynStatus poll();
     void udpReadTask();
-    void eventReadTask();
     static void connectionCallback(void *drvPvt, asynUser *pasynUser, char *portName,
                                size_t len, int eomReason);
     static void echoListener(myData *pPvt);
@@ -139,7 +138,7 @@ private:
     epicsEventId stopEventId;
     friend class pcsAxis;
 
-    asynStatus configureServer(const char* portname, myData *&pPvt, asynUser *&pasynUser, asynInterface *&pasynInterface);
+    asynStatus configureServer(const char* portname, myData *&pPvt, asynUser *&pasynUser, asynInterface *&pasynInterface, interruptCallbackOctet callBackRoutine);
     asynUser *pasynUserUDPStream;
     asynOctet *pasynOctet;
     asynInterface* pasynInterface;

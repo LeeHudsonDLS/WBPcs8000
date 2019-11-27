@@ -47,16 +47,16 @@ pcsController::pcsController(const char *portName, int lowLevelPortAddress, int 
 
     /* Connect to pcsController controller via main tcp port */
     status = pasynOctetSyncIO->connect(lowLevelPortName, 0, &pasynUserController_, NULL);
-    if (status) {
+    if (status!=asynSuccess) {
         asynPrint(this->pasynUserSelf, ASYN_TRACE_ERROR,
                   "%s: cannot connect to pcs controller\n",functionName);
     }
 
     // Initial handshaking
     sprintf(outString_,"");
-    writeReadController();
+    status = writeReadController();
     sprintf(outString_,"%s,%.2f,%d",NAME,VERSION,CODE);
-    writeReadController();
+    status = writeReadController();
 
     if(strcmp(inString_,"OK")) {
         asynPrint(this->pasynUserSelf, ASYN_TRACE_ERROR,
@@ -87,6 +87,7 @@ pcsController::pcsController(const char *portName, int lowLevelPortAddress, int 
 
         // Enable motor
         status = sendXmlCommand(i+1,SYS_STATE_PARAM,"Ready");
+
     }
 
     //Start UDP
@@ -96,19 +97,17 @@ pcsController::pcsController(const char *portName, int lowLevelPortAddress, int 
 
 
     // Configure asyn for udp sensor stream
-    configureServer(streamPortName,*&pStreamPvt,*&pasynUserUDPStream,*&pasynInterface);
+    status = configureServer(streamPortName,*&pStreamPvt,*&pasynUserUDPStream,*&pasynInterface,NULL);
+    if (status!=asynSuccess) {
+        asynPrint(this->pasynUserSelf, ASYN_TRACE_ERROR,
+                  "%s: error configuring udp stream port\n",functionName);
+    }
 
     // Configure asyn for tcp event stream
-    configureServer(eventPortName,*&pEventPvt,*&pasynUserEventStream,*&pasynInterfaceEvent);
-
-    // Register interrupts on tcp server to allow action to be taken when client connects
-    status = pEventPvt->pasynOctet->registerInterruptUser(
-            pEventPvt->octetPvt, pasynUserEventStream,
-            connectionCallback,pEventPvt,&pEventPvt->registrarPvt);
-
-    if(status!=asynSuccess) {
-        printf("ipEchoServer devAsynOctet registerInterruptUser %s\n",
-               pasynUserEventStream->errorMessage);
+    status = configureServer(eventPortName,*&pEventPvt,*&pasynUserEventStream,*&pasynInterfaceEvent,connectionCallback);
+    if (status!=asynSuccess) {
+        asynPrint(this->pasynUserSelf, ASYN_TRACE_ERROR,
+                  "%s: error configuring tcp event port\n",functionName);
     }
 
     startPoller(movingPollPeriod, idlePollPeriod, 2);
@@ -117,15 +116,12 @@ pcsController::pcsController(const char *portName, int lowLevelPortAddress, int 
                       epicsThreadPriorityMedium,
                       epicsThreadGetStackSize(epicsThreadStackMedium),
                       udpReadTaskC, this);
-
-
-
     return;
 }
 
 pcsController::~pcsController() {}
 
-asynStatus pcsController::configureServer(const char *portname, myData *&pPvt, asynUser *&pasynUser, asynInterface *&pasynInterface) {
+asynStatus pcsController::configureServer(const char *portname, myData *&pPvt, asynUser *&pasynUser, asynInterface *&pasynInterface, interruptCallbackOctet callBackRoutine) {
     asynStatus status;
     static const char *functionName = "pcsController::configureEventStream";
 
@@ -136,23 +132,33 @@ asynStatus pcsController::configureServer(const char *portname, myData *&pPvt, a
     pasynUser = pasynManager->createAsynUser(0,0);
     (pasynUser)->userPvt = pPvt;
     status = pasynManager->connectDevice(pasynUser,portname,0);
-    if(status!=asynSuccess) {
-        printf("can't connect to port %s: %s\n", portname, pasynUser->errorMessage);
-        return asynError;
+    if (status!=asynSuccess) {
+        asynPrint(pasynUser, ASYN_TRACE_ERROR,
+                  "%s: cannot connect server\n",functionName);
     }
+
     pasynInterface = pasynManager->findInterface(
             pasynUser,asynOctetType,1);
     if(!pasynInterface) {
-        printf("%s driver not supported\n",asynOctetType);
+        asynPrint(pasynUser, ASYN_TRACE_ERROR,"%s driver not supported\n",asynOctetType);
         return asynError;
     }
 
     pPvt->readTimeout = -1.0;
-
     pPvt->pasynOctet = (asynOctet *)pasynInterface->pinterface;
     pPvt->octetPvt = pasynInterface->drvPvt;
-    return status;
 
+    // Register interrupts on tcp server to allow action to be taken when client connects
+    if(callBackRoutine!=NULL) {
+        status = pEventPvt->pasynOctet->registerInterruptUser(
+                pEventPvt->octetPvt, pasynUser,
+                callBackRoutine, pEventPvt, &pEventPvt->registrarPvt);
+    }
+    if(status!=asynSuccess) {
+        asynPrint(pasynUser, ASYN_TRACE_ERROR,"ipEchoServer devAsynOctet registerInterruptUser %s\n",
+                  pasynUser->errorMessage);
+    }
+    return status;
 }
 
 
@@ -167,7 +173,6 @@ void pcsController::echoListener(pcsController::myData *pPvt) {
     eventPacket PACKET;
     asynOctet *pasynOctet;
 
-    printf("asyn client registerd: %s\n",pPvt->portName);
     status = pasynOctetSyncIO->connect(pPvt->portName, 0, &pasynUser, NULL);
     if (status) {
         asynPrint(pasynUser, ASYN_TRACE_ERROR,
