@@ -100,9 +100,9 @@ public:
 
     asynStatus poll();
     void udpReadTask();
-    static void connectionCallback(void *drvPvt, asynUser *pasynUser, char *portName,
-                               size_t len, int eomReason);
-    static void echoListener(myData *pPvt);
+    static void tcpClientConnectedCallback(void *drvPvt, asynUser *pasynUser, char *portName,
+                                           size_t len, int eomReason);
+    static void eventListener(myData *pPvt);
     char* lowLevelPortName;
     char* streamPortName;
     char* eventPortName;
@@ -125,7 +125,6 @@ protected:
     template <typename T>
     asynStatus sendXmlCommand(int axisNo,const std::string& parameter,T value);
     asynStatus sendXmlCommand(int axisNo,const std::string& parameter);
-
     asynStatus sendXmlCommand(const std::string& eos);
 
 

@@ -44,7 +44,6 @@ pcsController::pcsController(const char *portName, int lowLevelPortAddress, int 
     sprintf(streamPortName,"%s_UDP",portName);
     sprintf(eventPortName,"%s_TCP",portName);
 
-
     /* Connect to pcsController controller via main tcp port */
     status = pasynOctetSyncIO->connect(lowLevelPortName, 0, &pasynUserController_, NULL);
     if (status!=asynSuccess) {
@@ -79,7 +78,6 @@ pcsController::pcsController(const char *portName, int lowLevelPortAddress, int 
     commandConstructor.addInputParameter(NEG_LIMIT_INPUT,GET_INPUT,3);
     commandConstructor.addInputParameter(DRV_READY_INPUT,GET_INPUT,1);
 
-
     //Configure UDP streams and generic parameters for all axes
     for(int i = 0; i < numAxes; i++) {
         status = sendXmlCommand(i+1,CLEAR_UDP_CMD);
@@ -87,14 +85,12 @@ pcsController::pcsController(const char *portName, int lowLevelPortAddress, int 
 
         // Enable motor
         status = sendXmlCommand(i+1,SYS_STATE_PARAM,"Ready");
-
     }
 
     //Start UDP
     for(int i = 0; i < numAxes; i++) {
         status = sendXmlCommand(i+1,START_UDP_CMD);
     }
-
 
     // Configure asyn for udp sensor stream
     status = configureServer(streamPortName,*&pStreamPvt,*&pasynUserUDPStream,*&pasynInterface,NULL);
@@ -104,7 +100,8 @@ pcsController::pcsController(const char *portName, int lowLevelPortAddress, int 
     }
 
     // Configure asyn for tcp event stream
-    status = configureServer(eventPortName,*&pEventPvt,*&pasynUserEventStream,*&pasynInterfaceEvent,connectionCallback);
+    status = configureServer(eventPortName, *&pEventPvt, *&pasynUserEventStream, *&pasynInterfaceEvent,
+                             tcpClientConnectedCallback);
     if (status!=asynSuccess) {
         asynPrint(this->pasynUserSelf, ASYN_TRACE_ERROR,
                   "%s: error configuring tcp event port\n",functionName);
@@ -120,6 +117,36 @@ pcsController::pcsController(const char *portName, int lowLevelPortAddress, int 
 }
 
 pcsController::~pcsController() {}
+
+
+asynStatus pcsController::poll() {
+    callParamCallbacks();
+    asynStatus status;
+
+}
+
+void pcsController::createAsynParams(void){
+  int index = 0;
+
+  createParam(PCS_C_FirstParamString,asynParamInt32,&PCS_C_FirstParam);
+
+}
+
+/** Returns a pointer to an MCB4BAxis object.
+  * Returns NULL if the axis number encoded in pasynUser is invalid.
+  * \param[in] pasynUser asynUser structure that encodes the axis index number. */
+pcsAxis* pcsController::getAxis(asynUser *pasynUser)
+{
+    return static_cast<pcsAxis*>(asynMotorController::getAxis(pasynUser));
+}
+
+/** Returns a pointer to an MCB4BAxis object.
+  * Returns NULL if the axis number encoded in pasynUser is invalid.
+  * \param[in] axisNo Axis index number. */
+pcsAxis* pcsController::getAxis(int axisNo)
+{
+    return static_cast<pcsAxis*>(asynMotorController::getAxis(axisNo));
+}
 
 asynStatus pcsController::configureServer(const char *portname, myData *&pPvt, asynUser *&pasynUser, asynInterface *&pasynInterface, interruptCallbackOctet callBackRoutine) {
     asynStatus status;
@@ -162,7 +189,7 @@ asynStatus pcsController::configureServer(const char *portname, myData *&pPvt, a
 }
 
 
-void pcsController::echoListener(pcsController::myData *pPvt) {
+void pcsController::eventListener(pcsController::myData *pPvt) {
     asynUser *pasynUser;
     char buffer[1024];
     char rxBuffer[1024];
@@ -176,40 +203,37 @@ void pcsController::echoListener(pcsController::myData *pPvt) {
     status = pasynOctetSyncIO->connect(pPvt->portName, 0, &pasynUser, NULL);
     if (status) {
         asynPrint(pasynUser, ASYN_TRACE_ERROR,
-                  "echoListener: unable to connect to port %s\n",
+                  "eventListener: unable to connect to port %s\n",
                   pPvt->portName);
         return;
     }
     status = pasynOctetSyncIO->setInputEos(pasynUser, "\r\n", 2);
     if (status) {
         asynPrint(pasynUser, ASYN_TRACE_ERROR,
-                  "echoListener: unable to set input EOS on %s: %s\n",
+                  "eventListener: unable to set input EOS on %s: %s\n",
                   pPvt->portName, pasynUser->errorMessage);
         return;
     }
     status = pasynOctetSyncIO->setOutputEos(pasynUser, "\r\n", 2);
     if (status) {
         asynPrint(pasynUser, ASYN_TRACE_ERROR,
-                  "echoListener: unable to set output EOS on %s: %s\n",
+                  "eventListener: unable to set output EOS on %s: %s\n",
                   pPvt->portName, pasynUser->errorMessage);
         return;
     }
 
-    pasynOctetSyncIO->write(pasynUser,"HELLO\n",sizeof("HELLO\n"),2,&nwrite);
-    pasynOctetSyncIO->read(pasynUser,buffer,1024,2.0,&nread,&eomReason);
-    pasynOctetSyncIO->write(pasynUser,"OK\n",sizeof("OK\n"),2,&nwrite);
+    status = pasynOctetSyncIO->write(pasynUser,"HELLO\n",sizeof("HELLO\n"),2,&nwrite);
+    status = pasynOctetSyncIO->read(pasynUser,buffer,1024,2.0,&nread,&eomReason);
+    status = pasynOctetSyncIO->write(pasynUser,"OK\n",sizeof("OK\n"),2,&nwrite);
     printf("Got: %s\n",buffer);
-
 
     pasynUser->timeout=0.1;
 
     while(1) {
         packetIndex = 0;
         pasynOctetSyncIO->read(pasynUser,rxBuffer,1024,0.1,&nread,&eomReason);
-        //printf("%s : nread : %d\n",pPvt->portName,nread);
 
         if(nread>0) {
-            printf("Event!! %d\n",nread);
             //Manually unpack datagram
             memcpy(&PACKET.ev_code, &rxBuffer[packetIndex], 4);
             packetIndex += 4;
@@ -228,18 +252,13 @@ void pcsController::echoListener(pcsController::myData *pPvt) {
 
 }
 
-void pcsController::connectionCallback(void *drvPvt, asynUser *pasynUser, char *portName, size_t len, int eomReason) {
+void pcsController::tcpClientConnectedCallback(void *drvPvt, asynUser *pasynUser, char *portName, size_t len, int eomReason) {
 
     myData  *pPvt = (myData *)drvPvt;
     myData *newPvt = (myData*)calloc(1, sizeof(myData));
-    size_t bytes;
-    int nreason;
-    char buffer[10240];
-
-
 
     asynPrint(pasynUser, ASYN_TRACE_FLOW,
-              "ipEchoServer: connectionCallback, portName=%s\n", portName);
+              "ipEchoServer: tcpClientConnectedCallback, portName=%s\n", portName);
     printf("TCP  connection callback");
     epicsMutexLock(pPvt->mutexId);
     /* Make a copy of myData, with new portName */
@@ -250,39 +269,7 @@ void pcsController::connectionCallback(void *drvPvt, asynUser *pasynUser, char *
     epicsThreadCreate(pPvt->portName,
                       epicsThreadPriorityMedium,
                       epicsThreadGetStackSize(epicsThreadStackSmall),
-                      (EPICSTHREADFUNC)echoListener, newPvt);
-}
-
-
-asynStatus pcsController::poll() {
-    callParamCallbacks();
-    asynStatus status;
-
-}
-
-
-
-void pcsController::createAsynParams(void){
-  int index = 0;
-
-  createParam(PCS_C_FirstParamString,asynParamInt32,&PCS_C_FirstParam);
-
-}
-
-/** Returns a pointer to an MCB4BAxis object.
-  * Returns NULL if the axis number encoded in pasynUser is invalid.
-  * \param[in] pasynUser asynUser structure that encodes the axis index number. */
-pcsAxis* pcsController::getAxis(asynUser *pasynUser)
-{
-    return static_cast<pcsAxis*>(asynMotorController::getAxis(pasynUser));
-}
-
-/** Returns a pointer to an MCB4BAxis object.
-  * Returns NULL if the axis number encoded in pasynUser is invalid.
-  * \param[in] axisNo Axis index number. */
-pcsAxis* pcsController::getAxis(int axisNo)
-{
-    return static_cast<pcsAxis*>(asynMotorController::getAxis(axisNo));
+                      (EPICSTHREADFUNC) eventListener, newPvt);
 }
 
 
@@ -333,9 +320,6 @@ void pcsController::udpReadTask() {
     }
 
 }
-
-
-
 
 asynStatus pcsController::sendXmlCommand(const std::string& parameter) {
     asynStatus status;
