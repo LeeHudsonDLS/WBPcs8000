@@ -113,12 +113,8 @@ public:
     void createAsynParams(void);
     pcsAxis *getAxis(asynUser *pasynUser);
     pcsAxis *getAxis(int axisNo);
-    asynOctet *pasynOctet;
-    asynOctet *pasynOctetEvent;
     XmlCommandConstructor commandConstructor;
-    asynInterface* pasynInterface;
     void* octetPvt;
-    void* octetPvt2;
     int scale;
 
 
@@ -132,15 +128,7 @@ protected:
     asynStatus sendXmlCommand(int axisNo,const std::string& parameter);
 
     asynStatus sendXmlCommand(const std::string& eos);
-    asynUser *pasynUserUDPStream;
 
-
-    // For TCP event server
-    myData        *pPvt;
-    asynUser      *pasynUser;
-    asynUser *pasynUserEventStream;
-    asynInterface* pasynInterfaceEvent;
-    int           addr;
 
 #define FIRST_PCS_PARAM PCS_C_FirstParam
 
@@ -150,6 +138,17 @@ private:
     epicsEventId startEventId;
     epicsEventId stopEventId;
     friend class pcsAxis;
+
+    asynStatus configureUDPStream();
+    asynUser *pasynUserUDPStream;
+    asynOctet *pasynOctet;
+    asynInterface* pasynInterface;
+
+    // For TCP event server
+    asynStatus configureEventStream();
+    myData        *pPvt;
+    asynUser *pasynUserEventStream;
+    asynInterface* pasynInterfaceEvent;
 
 };
 

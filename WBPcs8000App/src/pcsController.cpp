@@ -16,13 +16,6 @@ static void udpReadTaskC(void *drvPvt)
     pPvt->udpReadTask();
 }
 
-static void eventReadTaskC(void *drvPvt)
-{
-    pcsController *pPvt = (pcsController *)drvPvt;
-
-    pPvt->eventReadTask();
-}
-
 pcsController::pcsController(const char *portName, int lowLevelPortAddress, int numAxes,
                               double movingPollPeriod, double idlePollPeriod)
     : asynMotorController(portName, numAxes + 1, NUM_MOTOR_DRIVER_PARAMS + NUM_OF_PCS_PARAMS,
@@ -33,15 +26,13 @@ pcsController::pcsController(const char *portName, int lowLevelPortAddress, int 
                               0,
                           0),
                           commandConstructor(*this),
-                          scale(AXIS_SCALE_FACTOR),
-                          addr(0)
+                          scale(AXIS_SCALE_FACTOR)
 {
 
     pcsAxis* pAxis;
     asynStatus status;
     static const char *functionName = "pcsController::pcsController";
     createAsynParams();
-
 
     driverName = "pcsController";
     //Add portname suffix
@@ -103,43 +94,44 @@ pcsController::pcsController(const char *portName, int lowLevelPortAddress, int 
         status = sendXmlCommand(i+1,START_UDP_CMD);
     }
 
-    //Configure UDP port
-    pasynUserUDPStream = pasynManager->createAsynUser(0,0);
-    status = pasynManager->connectDevice(pasynUserUDPStream, streamPortName,0);
-    pasynInterface = pasynManager->findInterface(pasynUserUDPStream, asynOctetType, 1);
+    // Configure asyn for udp sensor stream
+    configureUDPStream();
 
-    if (!pasynInterface) {
-        asynPrint(this->pasynUserSelf, ASYN_TRACE_ERROR,
-                  "%s: %s interface not supported", functionName, asynCommonType);
-        return;
-    }
+    // Configure asyn for tcp event stream
+    configureEventStream();
 
-    pasynOctet = (asynOctet *) pasynInterface->pinterface;
-    octetPvt=pasynInterface->drvPvt;
+    startPoller(movingPollPeriod, idlePollPeriod, 2);
 
-	if (status != asynSuccess) {
-		asynPrint(pasynUserSelf, ASYN_TRACE_ERROR,
-                  "%s: cannot connect to UDP\n",functionName);
-		return;
-	}
+    epicsThreadCreate("UDPStreamTask",
+                      epicsThreadPriorityMedium,
+                      epicsThreadGetStackSize(epicsThreadStackMedium),
+                      udpReadTaskC, this);
+
+    return;
+}
+
+pcsController::~pcsController() {}
 
 
-	// TCP server
+asynStatus pcsController::configureEventStream() {
+    asynStatus status;
+    static const char *functionName = "pcsController::configureEventStream";
+
     pPvt = (myData *)callocMustSucceed(1, sizeof(myData), "ipEchoServer");
     pPvt->mutexId = epicsMutexCreate();
     pPvt->portName = epicsStrDup(eventPortName);
-    pasynUser = pasynManager->createAsynUser(0,0);
-    pasynUser->userPvt = pPvt;
-    status = pasynManager->connectDevice(pasynUser,eventPortName,addr);
+    pasynUserEventStream = pasynManager->createAsynUser(0,0);
+    pasynUserEventStream->userPvt = pPvt;
+    status = pasynManager->connectDevice(pasynUserEventStream,eventPortName,0);
     if(status!=asynSuccess) {
-        printf("can't connect to port %s: %s\n", eventPortName, pasynUser->errorMessage);
-        return;
+        printf("can't connect to port %s: %s\n", eventPortName, pasynUserEventStream->errorMessage);
+        return asynError;
     }
     pasynInterfaceEvent = pasynManager->findInterface(
-        pasynUser,asynOctetType,1);
+            pasynUserEventStream,asynOctetType,1);
     if(!pasynInterfaceEvent) {
         printf("%s driver not supported\n",asynOctetType);
-        return;
+        return asynError;
     }
 
     pPvt->readTimeout = -1.0;
@@ -147,32 +139,40 @@ pcsController::pcsController(const char *portName, int lowLevelPortAddress, int 
     pPvt->pasynOctet = (asynOctet *)pasynInterfaceEvent->pinterface;
     pPvt->octetPvt = pasynInterfaceEvent->drvPvt;
     status = pPvt->pasynOctet->registerInterruptUser(
-                 pPvt->octetPvt, pasynUser,
-                 connectionCallback,pPvt,&pPvt->registrarPvt);
+            pPvt->octetPvt, pasynUserEventStream,
+            connectionCallback,pPvt,&pPvt->registrarPvt);
 
     if(status!=asynSuccess) {
         printf("ipEchoServer devAsynOctet registerInterruptUser %s\n",
-               pasynUser->errorMessage);
+               pasynUserEventStream->errorMessage);
     }
-
-    startPoller(movingPollPeriod, idlePollPeriod, 2);
-
-
-    epicsThreadCreate("UDPStreamTask",
-                      epicsThreadPriorityMedium,
-                      epicsThreadGetStackSize(epicsThreadStackMedium),
-                      udpReadTaskC, this);
-
-    /*epicsThreadCreate("EventStreamTask",
-                      epicsThreadPriorityMedium,
-                      epicsThreadGetStackSize(epicsThreadStackMedium),
-                      eventReadTaskC, this);*/
-
-    return;
 
 }
 
-pcsController::~pcsController() {}
+asynStatus pcsController::configureUDPStream() {
+    asynStatus status;
+    static const char *functionName = "pcsController::configureUDPStream";
+
+    pasynUserUDPStream = pasynManager->createAsynUser(0,0);
+    status = pasynManager->connectDevice(pasynUserUDPStream, streamPortName,0);
+    pasynInterface = pasynManager->findInterface(pasynUserUDPStream, asynOctetType, 1);
+
+    if (!pasynInterface) {
+        asynPrint(this->pasynUserSelf, ASYN_TRACE_ERROR,
+                  "%s: %s interface not supported", functionName, asynCommonType);
+        return asynError;
+    }
+
+    pasynOctet = (asynOctet *) pasynInterface->pinterface;
+    octetPvt=pasynInterface->drvPvt;
+
+    if (status != asynSuccess) {
+        asynPrint(pasynUserSelf, ASYN_TRACE_ERROR,
+                  "%s: cannot connect to UDP\n",functionName);
+        return asynError ;
+    }
+    return status;
+}
 
 void pcsController::echoListener(pcsController::myData *pPvt) {
     asynUser *pasynUser;
@@ -349,45 +349,7 @@ void pcsController::udpReadTask() {
 }
 
 
-void pcsController::eventReadTask() {
 
-    char rxBuffer[65535];
-    asynStatus status = asynSuccess;
-    static const char *functionName = "eventReadTask";
-    eventPacket PACKET;
-    size_t nBytesIn;
-    int eomReason;
-    int packetIndex = 0;
-    int scale;
-    pcsAxis* pAxis;
-
-    while(1){
-        packetIndex = 0;
-
-        //Read UDP Packet
-        status = pasynOctetEvent->flush(octetPvt2,pasynUserEventStream);
-        status = pasynOctetEvent->read(octetPvt2, pasynUserEventStream, rxBuffer, 65535 - 1,
-                                  &nBytesIn, &eomReason);
-
-
-        if(nBytesIn>0) {
-            printf("Event!!\n");
-            //Manually unpack datagram
-            memcpy(&PACKET.ev_code, &rxBuffer[packetIndex], 4);
-            packetIndex += 4;
-            memcpy(&PACKET.slave, &rxBuffer[packetIndex], 4);
-            packetIndex += 4;
-            memcpy(&PACKET.ts, &rxBuffer[packetIndex], 8);
-            packetIndex += 8;
-            memcpy(&PACKET.ev_value, &rxBuffer[packetIndex], 4);
-            packetIndex += 4;
-            memcpy(&PACKET.num_data, &rxBuffer[packetIndex], 4);
-            packetIndex += 4;
-        }
-
-    }
-
-}
 
 asynStatus pcsController::sendXmlCommand(const std::string& parameter) {
     asynStatus status;
