@@ -125,7 +125,7 @@ protected:
     template <typename T>
     asynStatus sendXmlCommand(int axisNo,const std::string& parameter,T value);
     asynStatus sendXmlCommand(int axisNo,const std::string& parameter);
-    asynStatus sendXmlCommand(const std::string& eos);
+    asynStatus sendXmlCommandToHardware(const std::string& eos);
 
 
 #define FIRST_PCS_PARAM PCS_C_FirstParam

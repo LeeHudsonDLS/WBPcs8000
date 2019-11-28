@@ -199,6 +199,7 @@ void pcsController::eventListener(pcsController::myData *pPvt) {
     asynStatus status;
     eventPacket PACKET;
     asynOctet *pasynOctet;
+    pcsAxis* pAxis;
 
     status = pasynOctetSyncIO->connect(pPvt->portName, 0, &pasynUser, NULL);
     if (status) {
@@ -246,6 +247,13 @@ void pcsController::eventListener(pcsController::myData *pPvt) {
             memcpy(&PACKET.num_data, &rxBuffer[packetIndex], 4);
             packetIndex += 4;
             printf("Server %u,%u,%llu,%u,%u\n",PACKET.ev_code,PACKET.slave,PACKET.ts,PACKET.ev_value,PACKET.num_data);
+
+            if (PACKET.ev_code == POSITION_UDP_STREAM_CODE) {
+                lock();
+                pAxis = getAxis(PACKET.slave + 1);
+                pAxis->setDoubleParam(motorPosition_, PACKET.data * pAxis->scale_);
+                unlock();
+            }
         }
 
     }
@@ -321,7 +329,7 @@ void pcsController::udpReadTask() {
 
 }
 
-asynStatus pcsController::sendXmlCommand(const std::string& parameter) {
+asynStatus pcsController::sendXmlCommandToHardware(const std::string& parameter) {
     asynStatus status;
     status = pasynOctetSyncIO->setInputEos(pasynUserController_, parameter.c_str(),2);
     if (status != asynSuccess) {
@@ -343,13 +351,13 @@ template <typename T>
 asynStatus pcsController::sendXmlCommand(int axisNo, const std::string &parameter, T value) {
 
     sprintf(outString_, commandConstructor.getXml(axisNo, parameter,value).c_str());
-    return sendXmlCommand(commandConstructor.getEos(parameter));
+    return sendXmlCommandToHardware(commandConstructor.getEos(parameter));
 }
 
 asynStatus pcsController::sendXmlCommand(int axisNo, const std::string &parameter) {
 
     sprintf(outString_, commandConstructor.getXml(axisNo, parameter).c_str());
-    return sendXmlCommand(commandConstructor.getEos(parameter));
+    return sendXmlCommandToHardware(commandConstructor.getEos(parameter));
 }
 
 
