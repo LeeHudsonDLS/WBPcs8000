@@ -138,14 +138,12 @@ private:
     epicsEventId stopEventId;
     friend class pcsAxis;
 
-    asynStatus configureServer(const char* portname, myData *&pPvt, asynUser *&pasynUser, asynInterface *&pasynInterface, interruptCallbackOctet callBackRoutine);
-    asynUser *pasynUserUDPStream;
+    asynStatus configureServer(const char* portname, myData *&pPvt, asynInterface *&pasynInterface, interruptCallbackOctet callBackRoutine);
     asynOctet *pasynOctet;
     asynInterface* pasynInterface;
     myData *pStreamPvt;
 
     // For TCP event server
-    asynUser *pasynUserEventStream;
     asynInterface* pasynInterfaceEvent;
     myData *pEventPvt;
 

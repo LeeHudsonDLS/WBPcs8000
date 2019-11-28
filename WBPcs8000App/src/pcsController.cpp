@@ -101,14 +101,14 @@ pcsController::pcsController(const char *portName, int lowLevelPortAddress, int 
     }
 
     // Configure asyn for udp sensor stream
-    status = configureServer(streamPortName,*&pStreamPvt,*&pasynUserUDPStream,*&pasynInterface,NULL);
+    status = configureServer(streamPortName,*&pStreamPvt,*&pasynInterface,NULL);
     if (status!=asynSuccess) {
         asynPrint(this->pasynUserSelf, ASYN_TRACE_ERROR,
                   "%s: error configuring udp stream port\n",functionName);
     }
 
     // Configure asyn for tcp event stream
-    status = configureServer(eventPortName, *&pEventPvt, *&pasynUserEventStream, *&pasynInterfaceEvent,
+    status = configureServer(eventPortName, *&pEventPvt,*&pasynInterfaceEvent,
                              tcpClientConnectedCallback);
     if (status!=asynSuccess) {
         asynPrint(this->pasynUserSelf, ASYN_TRACE_ERROR,
@@ -156,26 +156,26 @@ pcsAxis* pcsController::getAxis(int axisNo)
     return static_cast<pcsAxis*>(asynMotorController::getAxis(axisNo));
 }
 
-asynStatus pcsController::configureServer(const char *portname, myData *&pPvt, asynUser *&pasynUser, asynInterface *&pasynInterface, interruptCallbackOctet callBackRoutine) {
+asynStatus pcsController::configureServer(const char *portname, myData *&pPvt, asynInterface *&pasynInterface, interruptCallbackOctet callBackRoutine) {
     asynStatus status;
-    static const char *functionName = "pcsController::configureEventStream";
+    static const char *functionName = "pcsController::configureServer";
 
 
     pPvt = (myData *)callocMustSucceed(1, sizeof(myData), "ipEchoServer");
     pPvt->mutexId = epicsMutexCreate();
     pPvt->portName = epicsStrDup(portname);
-    pasynUser = pasynManager->createAsynUser(0,0);
-    (pasynUser)->userPvt = pPvt;
-    status = pasynManager->connectDevice(pasynUser,portname,0);
+    pPvt->pasynUser = pasynManager->createAsynUser(0,0);
+    (pPvt->pasynUser)->userPvt = pPvt;
+    status = pasynManager->connectDevice(pPvt->pasynUser,portname,0);
     if (status!=asynSuccess) {
-        asynPrint(pasynUser, ASYN_TRACE_ERROR,
+        asynPrint(pPvt->pasynUser, ASYN_TRACE_ERROR,
                   "%s: cannot connect server\n",functionName);
     }
 
     pasynInterface = pasynManager->findInterface(
-            pasynUser,asynOctetType,1);
+            pPvt->pasynUser,asynOctetType,1);
     if(!pasynInterface) {
-        asynPrint(pasynUser, ASYN_TRACE_ERROR,"%s driver not supported\n",asynOctetType);
+        asynPrint(pPvt->pasynUser, ASYN_TRACE_ERROR,"%s driver not supported\n",asynOctetType);
         return asynError;
     }
 
@@ -186,12 +186,12 @@ asynStatus pcsController::configureServer(const char *portname, myData *&pPvt, a
     // Register interrupts on tcp server to allow action to be taken when client connects
     if(callBackRoutine!=NULL) {
         status = pEventPvt->pasynOctet->registerInterruptUser(
-                pEventPvt->octetPvt, pasynUser,
+                pEventPvt->octetPvt, pPvt->pasynUser,
                 callBackRoutine, pEventPvt, &pEventPvt->registrarPvt);
     }
     if(status!=asynSuccess) {
-        asynPrint(pasynUser, ASYN_TRACE_ERROR,"ipEchoServer devAsynOctet registerInterruptUser %s\n",
-                  pasynUser->errorMessage);
+        asynPrint(pPvt->pasynUser, ASYN_TRACE_ERROR,"ipEchoServer devAsynOctet registerInterruptUser %s\n",
+                  pPvt->pasynUser->errorMessage);
     }
     return status;
 }
@@ -267,7 +267,7 @@ void pcsController::tcpClientConnectedCallback(void *drvPvt, asynUser *pasynUser
     myData  *pPvt = (myData *)drvPvt;
     myData *newPvt = (myData*)calloc(1, sizeof(myData));
 
-    asynPrint(pasynUser, ASYN_TRACE_FLOW,
+    asynPrint(pPvt->pasynUser, ASYN_TRACE_FLOW,
               "ipEchoServer: tcpClientConnectedCallback, portName=%s\n", portName);
     printf("TCP  connection callback");
     epicsMutexLock(pPvt->mutexId);
@@ -275,7 +275,6 @@ void pcsController::tcpClientConnectedCallback(void *drvPvt, asynUser *pasynUser
     *newPvt = *pPvt;
     epicsMutexUnlock(pPvt->mutexId);
     newPvt->portName = epicsStrDup(portName);
-    newPvt->pasynUser = pasynUser;
     /* Create a new thread to communicate with this port */
     epicsThreadCreate(pPvt->portName,
                       epicsThreadPriorityMedium,
@@ -300,7 +299,7 @@ void pcsController::udpReadTask() {
         packetIndex = 0;
 
         //Read UDP Packet
-        status = pStreamPvt->pasynOctet->read(pStreamPvt->octetPvt,pasynUserUDPStream,rxBuffer,65535-1,&nBytesIn,&eomReason);
+        status = pStreamPvt->pasynOctet->read(pStreamPvt->octetPvt,pStreamPvt->pasynUser,rxBuffer,65535-1,&nBytesIn,&eomReason);
 
         if(nBytesIn>0) {
             //Manually unpack datagram
