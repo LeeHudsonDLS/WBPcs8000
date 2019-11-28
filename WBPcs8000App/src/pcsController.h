@@ -95,6 +95,7 @@ public:
         asynOctet    *pasynOctet;
         void         *octetPvt;
         void         *registrarPvt;
+        asynUser     *pasynUser;
     }myData;
 
 
@@ -102,7 +103,7 @@ public:
     void udpReadTask();
     static void tcpClientConnectedCallback(void *drvPvt, asynUser *pasynUser, char *portName,
                                            size_t len, int eomReason);
-    static void eventListener(myData *pPvt);
+    void eventListener(myData *pPvt);
     char* lowLevelPortName;
     char* streamPortName;
     char* eventPortName;

@@ -16,6 +16,14 @@ static void udpReadTaskC(void *drvPvt)
     pPvt->udpReadTask();
 }
 
+static void eventListenerC(pcsController::myData *data)
+{
+    pcsController *pPvt = (pcsController *)data->pasynUser->drvUser;
+
+    pPvt->eventListener(data);
+}
+
+
 pcsController::pcsController(const char *portName, int lowLevelPortAddress, int numAxes,
                               double movingPollPeriod, double idlePollPeriod)
     : asynMotorController(portName, numAxes + 1, NUM_MOTOR_DRIVER_PARAMS + NUM_OF_PCS_PARAMS,
@@ -248,12 +256,6 @@ void pcsController::eventListener(pcsController::myData *pPvt) {
             packetIndex += 4;
             printf("Server %u,%u,%llu,%u,%u\n",PACKET.ev_code,PACKET.slave,PACKET.ts,PACKET.ev_value,PACKET.num_data);
 
-            if (PACKET.ev_code == POSITION_UDP_STREAM_CODE) {
-                lock();
-                pAxis = getAxis(PACKET.slave + 1);
-                pAxis->setDoubleParam(motorPosition_, PACKET.data * pAxis->scale_);
-                unlock();
-            }
         }
 
     }
@@ -273,11 +275,12 @@ void pcsController::tcpClientConnectedCallback(void *drvPvt, asynUser *pasynUser
     *newPvt = *pPvt;
     epicsMutexUnlock(pPvt->mutexId);
     newPvt->portName = epicsStrDup(portName);
+    newPvt->pasynUser = pasynUser;
     /* Create a new thread to communicate with this port */
     epicsThreadCreate(pPvt->portName,
                       epicsThreadPriorityMedium,
                       epicsThreadGetStackSize(epicsThreadStackSmall),
-                      (EPICSTHREADFUNC) eventListener, newPvt);
+                      (EPICSTHREADFUNC) eventListenerC, newPvt);
 }
 
 
