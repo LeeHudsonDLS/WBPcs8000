@@ -240,8 +240,9 @@ void pcsController::eventListener(pcsController::myData *pPvt) {
 
     while(1) {
         packetIndex = 0;
-        pasynOctetSyncIO->read(pasynUser,rxBuffer,1024,0.1,&nread,&eomReason);
-
+        printf("Reading\n");
+        pasynOctetSyncIO->read(pasynUser,rxBuffer,EVENT_PACKET_SIZE,-1,&nread,&eomReason);
+        printf("Reading Done\n");
         if(nread>0) {
             //Manually unpack datagram
             memcpy(&PACKET.ev_code, &rxBuffer[packetIndex], 4);
@@ -254,8 +255,16 @@ void pcsController::eventListener(pcsController::myData *pPvt) {
             packetIndex += 4;
             memcpy(&PACKET.num_data, &rxBuffer[packetIndex], 4);
             packetIndex += 4;
-            printf("Server %u,%u,%llu,%u,%u\n",PACKET.ev_code,PACKET.slave,PACKET.ts,PACKET.ev_value,PACKET.num_data);
+            printf("nread:%d\n",nread);
+            //printf("Server %u,%u,%llu,%u,%u\n",PACKET.ev_code,PACKET.slave,PACKET.ts,PACKET.ev_value,PACKET.num_data);
 
+            if (PACKET.ev_code == 303) {
+                printf("Done Moving\n");
+                lock();
+                pAxis = getAxis(PACKET.slave + 1);
+                pAxis->setIntegerParam(motorStatusDone_, 1);
+                unlock();
+            }
         }
 
     }

@@ -29,6 +29,7 @@
 #define STREAMS_PORT_SUFFIX "_UDP"
 #define EVENT_PORT_SUFFIX   "_TCP"
 
+#define EVENT_PACKET_SIZE 28
 
 // Commands
 #define START_UDP_CMD "start_udp_cmd"

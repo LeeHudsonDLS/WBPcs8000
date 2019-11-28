@@ -47,23 +47,30 @@ void pcsAxis::initialise(int axisNo) {
 asynStatus pcsAxis::move(double position, int relative, double minVelocity, double maxVelocity, double acceleration){
 
     double distance = 0;
-    size_t nwrite;
-    asynStatus status = asynError;
+    size_t nwrite,nread;
+    int eomReason;
+    asynStatus status = asynSuccess;
     static const char *functionName = "move";
     char seqBuffer[4096];
+    char rxBuffer[1024];
     double resolution;
     printf("pcsAxis::move(%f) called\n",position);
-
+    rxBuffer[0]='\0';
+    ctrl_->inString_[0]='\0';
 
     // Set the velocity
     absoluteMoveSequencer.setElement("//rate",maxVelocity/scale_);
     absoluteMoveSequencer.setElement("//end_ampl",position/scale_);
     sprintf(seqBuffer,absoluteMoveSequencer.getXml().c_str());
-    pasynOctetSyncIO->write(ctrl_->pasynUserController_,seqBuffer,strlen(seqBuffer),DEFAULT_CONTROLLER_TIMEOUT,&nwrite);
+    status = pasynOctetSyncIO->writeRead(ctrl_->pasynUserController_,seqBuffer,strlen(seqBuffer),rxBuffer,1024,0.2,&nwrite,&nread,&eomReason);
+    //pasynOctetSyncIO->write(ctrl_->pasynUserController_,seqBuffer,strlen(seqBuffer),DEFAULT_CONTROLLER_TIMEOUT,&nwrite);
 
 
+
+    ctrl_->inString_[0]='\0';
     sprintf(ctrl_->outString_,ctrl_->commandConstructor.getXml(axisNo_,SEQ_CONTROL_PARAM,"Program").c_str());
-    ctrl_->writeController();
+    //ctrl_->writeController();
+    status = pasynOctetSyncIO->writeRead(ctrl_->pasynUserController_,ctrl_->commandConstructor.getXml(axisNo_,SEQ_CONTROL_PARAM,"Program").c_str(),strlen(ctrl_->commandConstructor.getXml(axisNo_,SEQ_CONTROL_PARAM,"Program").c_str()),rxBuffer,1024,0.2,&nwrite,&nread,&eomReason);
 
     asynPrint(ctrl_->pasynUserSelf, ASYN_TRACE_FLOW, "%s\n", functionName);
     setIntegerParam(ctrl_->motorStatusDone_,1);
@@ -90,7 +97,7 @@ asynStatus pcsAxis::setPosition(double position){
 
 asynStatus pcsAxis::poll(bool *moving) {
 
-    //setIntegerParam(ctrl_->motorStatusDone_,1);
+    setIntegerParam(ctrl_->motorStatusDone_,1);
     //*moving = false;
     callParamCallbacks();
     /*
