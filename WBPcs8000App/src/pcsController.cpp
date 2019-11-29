@@ -13,12 +13,14 @@ static void udpReadTaskC(void *drvPvt)
 {
     pcsController *pPvt = (pcsController *)drvPvt;
 
+    printf("\n##########Address of pPvt = %d#######\n",pPvt);
     pPvt->udpReadTask();
 }
 
 static void eventListenerC(pcsController::myData *data)
 {
-    pcsController *pPvt = (pcsController *)data->pasynUser->drvUser;
+    pcsController *pPvt = (pcsController *)data->cont;
+    printf("\n##########Address of pPvt = %d#######\n",pPvt);
 
     pPvt->eventListener(data);
 }
@@ -34,13 +36,15 @@ pcsController::pcsController(const char *portName, int lowLevelPortAddress, int 
                               0,
                           0),
                           commandConstructor(*this),
-                          scale(AXIS_SCALE_FACTOR)
+                          scale(AXIS_SCALE_FACTOR),
+                          test(0)
 {
 
     pcsAxis* pAxis;
     asynStatus status;
     static const char *functionName = "pcsController::pcsController";
     createAsynParams();
+    printf("\n########Address of pcsController %d#######\n",this);
 
     driverName = "pcsController";
     //Add portname suffix
@@ -159,9 +163,10 @@ pcsAxis* pcsController::getAxis(int axisNo)
 asynStatus pcsController::configureServer(const char *portname, myData *&pPvt, asynInterface *&pasynInterface, interruptCallbackOctet callBackRoutine) {
     asynStatus status;
     static const char *functionName = "pcsController::configureServer";
-
+    printf("\n########Address of pcsController %d#######\n",this);
 
     pPvt = (myData *)callocMustSucceed(1, sizeof(myData), "ipEchoServer");
+    pPvt->cont=this;
     pPvt->mutexId = epicsMutexCreate();
     pPvt->portName = epicsStrDup(portname);
     pPvt->pasynUser = pasynManager->createAsynUser(0,0);
@@ -185,9 +190,9 @@ asynStatus pcsController::configureServer(const char *portname, myData *&pPvt, a
 
     // Register interrupts on tcp server to allow action to be taken when client connects
     if(callBackRoutine!=NULL) {
-        status = pEventPvt->pasynOctet->registerInterruptUser(
-                pEventPvt->octetPvt, pPvt->pasynUser,
-                callBackRoutine, pEventPvt, &pEventPvt->registrarPvt);
+        status = pPvt->pasynOctet->registerInterruptUser(
+                pPvt->octetPvt, pPvt->pasynUser,
+                callBackRoutine, pPvt, &pPvt->registrarPvt);
     }
     if(status!=asynSuccess) {
         asynPrint(pPvt->pasynUser, ASYN_TRACE_ERROR,"ipEchoServer devAsynOctet registerInterruptUser %s\n",
@@ -256,15 +261,17 @@ void pcsController::eventListener(pcsController::myData *pPvt) {
             memcpy(&PACKET.num_data, &rxBuffer[packetIndex], 4);
             packetIndex += 4;
             printf("nread:%d\n",nread);
-            //printf("Server %u,%u,%llu,%u,%u\n",PACKET.ev_code,PACKET.slave,PACKET.ts,PACKET.ev_value,PACKET.num_data);
+            printf("Server %u,%u,%llu,%u,%u\n",PACKET.ev_code,PACKET.slave,PACKET.ts,PACKET.ev_value,PACKET.num_data);
 
-            if (PACKET.ev_code == 303) {
-                printf("Done Moving\n");
-                lock();
-                pAxis = getAxis(PACKET.slave + 1);
-                pAxis->setIntegerParam(motorStatusDone_, 1);
-                unlock();
+            if (PACKET.ev_code == 20) {
+                if(PACKET.ev_value == 2) {
+                    lock();
+                    pAxis = getAxis(PACKET.slave + 1);
+                    pAxis->setIntegerParam(motorStatusDone_, 1);
+                    unlock();
+                }
             }
+
         }
 
     }
@@ -275,6 +282,8 @@ void pcsController::tcpClientConnectedCallback(void *drvPvt, asynUser *pasynUser
 
     myData  *pPvt = (myData *)drvPvt;
     myData *newPvt = (myData*)calloc(1, sizeof(myData));
+    printf("\n########Address of pcsController %d#######\n",pPvt->cont);
+
 
     asynPrint(pPvt->pasynUser, ASYN_TRACE_FLOW,
               "ipEchoServer: tcpClientConnectedCallback, portName=%s\n", portName);
@@ -282,6 +291,7 @@ void pcsController::tcpClientConnectedCallback(void *drvPvt, asynUser *pasynUser
     epicsMutexLock(pPvt->mutexId);
     /* Make a copy of myData, with new portName */
     *newPvt = *pPvt;
+    printf("\n########Address of pcsController %d#######\n",newPvt->cont);
     epicsMutexUnlock(pPvt->mutexId);
     newPvt->portName = epicsStrDup(portName);
     /* Create a new thread to communicate with this port */

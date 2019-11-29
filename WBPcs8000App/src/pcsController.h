@@ -69,7 +69,7 @@ public:
                   double idlePollPeriod);
     ~pcsController();
 
-
+    int test;
     typedef struct{
         unsigned int code;
         unsigned int slave;
@@ -97,6 +97,7 @@ public:
         void         *octetPvt;
         void         *registrarPvt;
         asynUser     *pasynUser;
+        void *       cont;
     }myData;
 
 
