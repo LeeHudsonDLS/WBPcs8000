@@ -55,6 +55,11 @@
 #define EVENT_CLIENT_HANDSHAKE_SIZE 11
 #define EVENT_PACKET_SIZE 28
 
+#define SEQ_STATE_CHANGE_EVT    20
+#define NLIM_STATE_CHANGE_EVT    203
+#define PLIM_STATE_CHANGE_EVT    202
+
+
 
 /*
  * Commonly used xml locations in CSV representation to be used directly by the XmlCommandConstructor

@@ -314,14 +314,32 @@ void pcsController::eventListener(pcsController::portData *pPvt) {
             printf("nread:%d\n",nread);
             printf("Server %u,%u,%llu,%u,%u\n",PACKET.ev_code,PACKET.slave,PACKET.ts,PACKET.ev_value,PACKET.num_data);
 
-            if (PACKET.ev_code == 20) {
-                if(PACKET.ev_value == 2) {
-                    lock();
-                    pAxis = getAxis(PACKET.slave + 1);
-                    pAxis->setIntegerParam(motorStatusDone_, 1);
-                    unlock();
-                }
+            lock();
+            pAxis = getAxis(PACKET.slave + 1);
+
+            switch(PACKET.ev_code){
+                case SEQ_STATE_CHANGE_EVT:
+                    if(PACKET.ev_value == 2) {
+                        pAxis->setIntegerParam(motorStatusDone_, 1);
+                    }
+                    if(PACKET.ev_value == 3) {
+                        pAxis->setIntegerParam(motorStatusDone_, 0);
+                    }
+                    break;
+                case PLIM_STATE_CHANGE_EVT:
+                    pAxis->setDoubleParam(motorHighLimit_,PACKET.ev_value^1);
+                    printf("Setting PLIM to %d\n",PACKET.ev_value^1);
+                    break;
+                case NLIM_STATE_CHANGE_EVT:
+                    pAxis->setDoubleParam(motorLowLimit_,PACKET.ev_value^1);
+                    printf("Setting NLIM to %d\n",PACKET.ev_value^1);
+                    break;
+                default:
+                    break;
             }
+
+
+            unlock();
         }
     }
 }
