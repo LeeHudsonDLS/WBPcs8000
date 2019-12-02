@@ -29,6 +29,7 @@ pcsAxis::pcsAxis(pcsController *ctrl, int axisNo)
     setIntegerParam(ctrl_->motorStatusMoving_, false);
     setIntegerParam(ctrl_->motorStatusDone_,1);
     callParamCallbacks();
+    ctrl_->axesInitialised++;
 
 }
 

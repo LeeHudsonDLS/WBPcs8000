@@ -29,7 +29,6 @@
 #define STREAMS_PORT_SUFFIX "_UDP"
 #define EVENT_PORT_SUFFIX   "_TCP"
 
-#define EVENT_PACKET_SIZE 28
 
 // Commands
 #define START_UDP_CMD "start_udp_cmd"
@@ -43,12 +42,19 @@
 #define NEG_LIMIT_INPUT "neg_limit_input"
 #define DRV_READY_INPUT "drive_ready_input"
 
-// UDP Stream codes
+// UDP Stream related definitions
+#define UDP_PACKET_SIZE 3236    //36 bytes of meta data and 800 4byte data objects. 36+(800*4)
 #define PHYS1_UDP_STREAM_CODE   1
 #define PHYS2_UDP_STREAM_CODE   2
 #define PHYS3_UDP_STREAM_CODE   3
 #define POSITION_UDP_STREAM_CODE 81
 #define VELOCITY_UDP_STREAM_CODE 82
+
+
+// TCP Event related definitions
+#define EVENT_CLIENT_HANDSHAKE_SIZE 11
+#define EVENT_PACKET_SIZE 28
+
 
 /*
  * Commonly used xml locations in CSV representation to be used directly by the XmlCommandConstructor
@@ -69,7 +75,6 @@ public:
                   double idlePollPeriod);
     ~pcsController();
 
-    int test;
     typedef struct{
         unsigned int code;
         unsigned int slave;
@@ -79,7 +84,7 @@ public:
         float minDrag;
         float maxDrag;
         float data;
-    }udpPacket;
+    }streamUDPPacket;
 
     typedef struct{
         unsigned int ev_code;
@@ -87,7 +92,8 @@ public:
         unsigned long long int ts;
         unsigned int ev_value;
         unsigned int num_data;
-    }eventPacket;
+        unsigned int data;
+    }eventTCPPacket;
 
     typedef struct myData {
         epicsMutexId mutexId;
@@ -97,15 +103,15 @@ public:
         void         *octetPvt;
         void         *registrarPvt;
         asynUser     *pasynUser;
-        void *       cont;
-    }myData;
+        void         *pController;
+    }portData;
 
 
     asynStatus poll();
     void udpReadTask();
     static void tcpClientConnectedCallback(void *drvPvt, asynUser *pasynUser, char *portName,
                                            size_t len, int eomReason);
-    void eventListener(myData *pPvt);
+    void eventListener(portData *pPvt);
     char* lowLevelPortName;
     char* streamPortName;
     char* eventPortName;
@@ -118,6 +124,7 @@ public:
     XmlCommandConstructor commandConstructor;
     void* octetPvt;
     int scale;
+    int axesInitialised;
 
 
 
@@ -139,15 +146,14 @@ private:
     epicsEventId startEventId;
     epicsEventId stopEventId;
     friend class pcsAxis;
+    int clientsConnected;
 
-    asynStatus configureServer(const char* portname, myData *&pPvt, asynInterface *&pasynInterface, interruptCallbackOctet callBackRoutine);
+    asynStatus configureServer(const char* portname, portData *&pPvt, interruptCallbackOctet callBackRoutine);
     asynOctet *pasynOctet;
-    asynInterface* pasynInterface;
-    myData *pStreamPvt;
+    portData *pStreamPvt;
 
     // For TCP event server
-    asynInterface* pasynInterfaceEvent;
-    myData *pEventPvt;
+    portData *pEventPvt;
 
 };
 
