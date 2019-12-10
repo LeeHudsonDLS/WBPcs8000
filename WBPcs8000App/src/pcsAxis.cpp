@@ -47,30 +47,75 @@ void pcsAxis::initialise(int axisNo) {
 
 asynStatus pcsAxis::move(double position, int relative, double minVelocity, double maxVelocity, double acceleration){
 
-    double distance = 0;
     size_t nwrite,nread;
     int eomReason;
     asynStatus status = asynSuccess;
     static const char *functionName = "move";
     char seqBuffer[4096];
     char rxBuffer[1024];
-    double resolution;
+    double decelTime,decelDist,midPosition;
     printf("pcsAxis::move(%f) called\n",position);
     rxBuffer[0]='\0';
     ctrl_->inString_[0]='\0';
 
-    // Set the velocity
-    absoluteMoveSequencer.setElement("//rate",maxVelocity/scale_);
-    absoluteMoveSequencer.setElement("//end_ampl",position/scale_);
+    /*
+     * Determine the amount of time the axis will take to decelerate and the amount the axis will travel
+     * during this deceleration.
+     */
+    decelTime = maxVelocity/acceleration;
+    decelDist = ((maxVelocity/scale_)*decelTime)/2;
+
+    /*
+     * Determine "midPosition". Here "position" is the demand from the motor record and status_.position is the
+     * actual position. The "midPosition" is the end position for the first synthesizer, the first synthesizer
+     * takes care of the initial acceleration and the entire move up to the point where deceleration starts. This
+     * "midPosition" must be the desired end position - how far the axis will travel during deceleration given
+     * the velocity and deceleration rate.
+     */
+    if(position > status_.position)
+        midPosition=(position/scale_)-decelDist;
+    else
+        midPosition=(position/scale_)+decelDist;
+
+    /*
+     * Set up the first half of the motion profile. The "rate" is 0 as this assumes starting from a stand still
+     *    ________________
+     *   /
+     *  /
+     * /
+     *
+     */
+    absoluteMoveSequencer.setElement("/sequencer_prog/synth_set[1]/acc",acceleration/scale_);
+    absoluteMoveSequencer.setElement("/sequencer_prog/synth_set[1]/rate",0);
+    absoluteMoveSequencer.setElement("/sequencer_prog/synth_set[1]/end_rate",maxVelocity/scale_);
+    absoluteMoveSequencer.setElement("/sequencer_prog/synth_set[1]/end_ampl",midPosition);
+
+
+    /*
+     * Set up the second half of the motion profile. This is purely the deceleration stage. "end_rate" cannot be
+     * zero.
+     *
+     *      \
+     *       \
+     *        \
+     */
+    absoluteMoveSequencer.setElement("/sequencer_prog/synth_set[2]/acc",acceleration/scale_);
+    absoluteMoveSequencer.setElement("/sequencer_prog/synth_set[2]/rate",maxVelocity/scale_);
+    absoluteMoveSequencer.setElement("/sequencer_prog/synth_set[2]/end_rate",0.001);
+    absoluteMoveSequencer.setElement("/sequencer_prog/synth_set[2]/end_ampl",position/scale_);
+
+
+    // Get the completed sequncer in XML form
     sprintf(seqBuffer,absoluteMoveSequencer.getXml().c_str());
-    status = pasynOctetSyncIO->writeRead(ctrl_->pasynUserController_,seqBuffer,strlen(seqBuffer),rxBuffer,1024,0.2,&nwrite,&nread,&eomReason);
-    //pasynOctetSyncIO->write(ctrl_->pasynUserController_,seqBuffer,strlen(seqBuffer),DEFAULT_CONTROLLER_TIMEOUT,&nwrite);
+
+    // Send the sequencer to the controller
+    pasynOctetSyncIO->setInputEos(ctrl_->pasynUserController_,"</sequencer_prog>",strlen("</sequencer_prog>"));
+    status = pasynOctetSyncIO->writeRead(ctrl_->pasynUserController_,seqBuffer,strlen(seqBuffer),rxBuffer,1024,2,&nwrite,&nread,&eomReason);
 
 
-
+    // Send the command to start the sequencer
     ctrl_->inString_[0]='\0';
     sprintf(ctrl_->outString_,ctrl_->commandConstructor.getXml(axisNo_,SEQ_CONTROL_PARAM,"Program").c_str());
-    //ctrl_->writeController();
     status = pasynOctetSyncIO->writeRead(ctrl_->pasynUserController_,ctrl_->commandConstructor.getXml(axisNo_,SEQ_CONTROL_PARAM,"Program").c_str(),strlen(ctrl_->commandConstructor.getXml(axisNo_,SEQ_CONTROL_PARAM,"Program").c_str()),rxBuffer,1024,0.2,&nwrite,&nread,&eomReason);
 
     asynPrint(ctrl_->pasynUserSelf, ASYN_TRACE_FLOW, "%s\n", functionName);

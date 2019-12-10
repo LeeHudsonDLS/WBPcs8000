@@ -6,6 +6,7 @@
 #define PCSAXIS_H
 #include "asynMotorController.h"
 #include "asynMotorAxis.h"
+#include <math.h>
 #include <iocsh.h>
 #include <epicsExport.h>
 #include <string>
