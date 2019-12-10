@@ -146,9 +146,11 @@ asynStatus pcsController::poll() {
 }
 
 void pcsController::createAsynParams(void){
-  int index = 0;
-
-  createParam(PCS_C_FirstParamString,asynParamInt32,&PCS_C_FirstParam);
+    int index = 0;
+    asynStatus status = asynSuccess;
+    status = createParam(PCS_C_FirstParamString,asynParamInt32,&PCS_C_FirstParam);
+    status = createParam(PCS_C_SeqStateString,asynParamInt32,&PCS_C_SeqState);
+    status = createParam(PCS_C_XmlSequencerString,asynParamOctet,&PCS_C_XmlSequencer);
 
 }
 
@@ -321,9 +323,11 @@ void pcsController::eventListener(pcsController::portData *pPvt) {
                 case SEQ_STATE_CHANGE_EVT:
                     if(PACKET.ev_value == 2) {
                         pAxis->setIntegerParam(motorStatusDone_, 1);
+                        pAxis->setIntegerParam(PCS_C_SeqState,0);
                     }
                     if(PACKET.ev_value == 3) {
                         pAxis->setIntegerParam(motorStatusDone_, 0);
+                        pAxis->setIntegerParam(PCS_C_SeqState,1);
                     }
                     break;
                 case PLIM_STATE_CHANGE_EVT:
@@ -397,6 +401,20 @@ void pcsController::udpReadTask() {
 
 }
 
+
+asynStatus pcsController::writeOctet(asynUser *pasynUser, const char *value, size_t nChars, size_t *nActual) {
+
+    /*
+     * Need method to determine if string resembles a sequencer
+     */
+    if(pasynUser->reason == PCS_C_XmlSequencer){
+        printf("You're trying to write a sequencer:\n");
+        printf("%s\n",value);
+    }
+
+    *nActual = strlen(value);
+    return asynSuccess;
+}
 /*
  * Method to append EOS (as this changes with every command..) and call writeReadController. This assumes the command
  * to be sent is ALREADY in outString_.

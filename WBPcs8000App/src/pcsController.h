@@ -18,7 +18,9 @@
 #include "XmlCommandConstructor.h"
 
 #define PCS_C_FirstParamString           "PCS_C_FIRSTPARAM"
-#define NUM_OF_PCS_PARAMS   1
+#define PCS_C_SeqStateString             "SEQ_STATE"
+#define PCS_C_XmlSequencerString         "XML_SEQ"
+#define NUM_OF_PCS_PARAMS   3
 
 // Items used for initial handshaking
 #define NAME "DLS"
@@ -113,6 +115,9 @@ public:
 
 
     asynStatus poll();
+
+    /* Method to override */
+    asynStatus writeOctet(asynUser *pasynUser, const char *value, size_t nChars, size_t *nActual);
     void udpReadTask();
     static void tcpClientConnectedCallback(void *drvPvt, asynUser *pasynUser, char *portName,
                                            size_t len, int eomReason);
@@ -134,9 +139,10 @@ public:
 
 
 protected:
-    //pcsAxis **pAxes_;    /**< Array of pointers to axis objects */
-
+    /* Asyn parameters */
     int PCS_C_FirstParam;
+    int PCS_C_SeqState;
+    int PCS_C_XmlSequencer;
     template <typename T>
     asynStatus sendXmlCommand(int axisNo,const std::string& parameter,T value);
     asynStatus sendXmlCommand(int axisNo,const std::string& parameter);

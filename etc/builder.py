@@ -51,6 +51,9 @@ class pcsController(Device):
         POLLMOVING = Simple("Poll period (ms) while moving", int),
         POLLNOTMOVING = Simple("Poll period (ms) while not moving", int))
 
+class _sequencerControl(AutoSubstitution):
+    TemplateFile = "sequencerControl.db"
+
 class _dls_pcs_asyn_motor(AutoSubstitution,MotorRecord):
     TemplateFile = "dls_pcs_asyn_motor.db"
 
@@ -75,6 +78,7 @@ class pcsAxis(Device):
         self.EGU = EGU
         self.TWV = TWV
         _dls_pcs_asyn_motor(P=self.P,M=self.M,PORT=self.CONTROLLER,ADDR=self.ADDR,DESC=self.DESC,MRES=0.001,VELO=self.VELO,PREC=self.PREC,EGU=self.EGU,TWV=self.TWV)
+        _sequencerControl(P=self.P,M=self.M,PORT=self.CONTROLLER,AXIS_NO=self.AXIS_NO)
     # Once per instantiation
     def Initialise(self):
         print "# Configure Walter and Bai PCS8000 Axis"

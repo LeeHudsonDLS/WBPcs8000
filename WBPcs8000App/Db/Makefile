@@ -19,6 +19,7 @@ include $(TOP)/configure/CONFIG
 # template files like this
 #
 DB += dls_pcs_asyn_motor.db
+DB += sequencerControl.db
 #DB += BL06I-MO-IOC-01_sim.db
 
 #USES_TEMPLATE += $(MOTOR)/db/motor.template
