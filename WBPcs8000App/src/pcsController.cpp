@@ -408,8 +408,7 @@ asynStatus pcsController::writeOctet(asynUser *pasynUser, const char *value, siz
      * Need method to determine if string resembles a sequencer
      */
     if(pasynUser->reason == PCS_C_XmlSequencer){
-        printf("You're trying to write a sequencer:\n");
-        printf("%s\n",value);
+
     }
 
     *nActual = strlen(value);

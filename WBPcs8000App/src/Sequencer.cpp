@@ -16,6 +16,19 @@ Sequencer::Sequencer(const std::string& xmlTemplateFile) {
 
 }
 
+bool Sequencer::isStringXML(const std::string &xmlString) {
+
+    xmlDocPtr dPtr = xmlParseMemory(xmlString.c_str(),xmlString.size());
+    if(dPtr == NULL) {
+        xmlFreeDoc(dPtr);
+        return false;
+    }else {
+        xmlFreeDoc(dPtr);
+        return true;
+    }
+
+}
+
 int Sequencer::setElement(const std::string& xPath, const std::string& value) {
 
     xmlChar *xpath = (xmlChar*) xPath.c_str();
