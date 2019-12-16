@@ -430,33 +430,10 @@ asynStatus pcsController::writeOctet(asynUser *pasynUser, const char *value, siz
     *nActual = strlen(value);
     return asynSuccess;
 }
-/*
- * Method to append EOS (as this changes with every command..) and call writeReadController. This assumes the command
- * to be sent is ALREADY in outString_.
- * @param Unique parameter key
- * @return asynStatus
- */
-asynStatus pcsController::sendXmlCommandToHardware(const std::string& parameter) {
-    asynStatus status;
 
-    //status = pasynOctetSyncIO->setInputEos(pasynUserController_, parameter.c_str(),2);
-    if (status != asynSuccess) {
-        asynPrint(pasynUserSelf, ASYN_TRACE_ERROR,
-                  "sendXmlCommand: error setting EOS\n");
-        return status;
-    }
-    status = writeReadController();
-    if (status != asynSuccess) {
-        asynPrint(pasynUserSelf, ASYN_TRACE_ERROR,
-                  "sendXmlCommand: writeReadController error\n");
-        return status;
-    }
-    return status;
-
-}
 
 /*
- * Method to populate outString_ with an XML command ready to be sent to the controller.
+ * Method to populate outString_ with an XML command and send to the controller.
  * Looks up the parameter in the commandConstructor member with the unique parameter key.
  * @param axisNo Axis number
  * @param parameter Unique parameter key
@@ -465,12 +442,19 @@ asynStatus pcsController::sendXmlCommandToHardware(const std::string& parameter)
 template <typename T>
 asynStatus pcsController::sendXmlCommand(int axisNo, const std::string &parameter, T value) {
 
+    asynStatus status = asynSuccess;
     sprintf(outString_, commandConstructor.getXml(axisNo, parameter,value).c_str());
-    return sendXmlCommandToHardware(commandConstructor.getEos(parameter));
+    status = writeReadController();
+    if (status != asynSuccess) {
+        asynPrint(pasynUserSelf, ASYN_TRACE_ERROR,
+                  "sendXmlCommand: writeReadController error\n");
+        return status;
+    }
+    return status;
 }
 
 /*
- * Method to populate outString_ with an XML command ready to be sent to the controller.
+ * Method to populate outString_ with an XML command and send to the controller.
  * Looks up the parameter in the commandConstructor member with the unique parameter key.
  * This variant is for a parameter with no value, eg, <udpxmit><slave>0</slave><clear></clear></udpxmit>
  * @param axisNo Axis number
@@ -478,8 +462,15 @@ asynStatus pcsController::sendXmlCommand(int axisNo, const std::string &paramete
  */
 asynStatus pcsController::sendXmlCommand(int axisNo, const std::string &parameter) {
 
+    asynStatus status = asynSuccess;
     sprintf(outString_, commandConstructor.getXml(axisNo, parameter).c_str());
-    return sendXmlCommandToHardware(commandConstructor.getEos(parameter));
+    status = writeReadController();
+    if (status != asynSuccess) {
+        asynPrint(pasynUserSelf, ASYN_TRACE_ERROR,
+                  "sendXmlCommand: writeReadController error\n");
+        return status;
+    }
+    return status;
 }
 
 
@@ -519,6 +510,7 @@ asynStatus pcsController::writeReadController() {
                                          &nbytesOut,
                                          &nbytesIn,
                                          &eomReason);
+
     if ( status != asynSuccess ) {
         asynPrint(pasynUserController_, ASYN_TRACE_ERROR,
                   "SendAndReceive error calling writeRead, output=%s status=%d, error=%s\n",
@@ -528,7 +520,7 @@ asynStatus pcsController::writeReadController() {
               "SendAndReceive, sent: '%s', received: '%s'\n",
               outString_, rxBuffer);
     nread = nbytesIn;
-    /* Loop until we the response contains ",EndOfAPI" or we get an error */
+    /* Loop until we the response contains the eos or we get an error */
     while ((status==asynSuccess) &&
            (strcmp(rxBuffer + nread - strlen(eos), eos) != 0)) {
         status = pasynOctetSyncIO->read(pasynUserController_,
@@ -543,8 +535,9 @@ asynStatus pcsController::writeReadController() {
         nread += nbytesIn;
     }
 
-    printf("rxbuff: %s\n",rxBuffer);
+
     sprintf(inString_,rxBuffer);
+    return status;
 
 }
 
