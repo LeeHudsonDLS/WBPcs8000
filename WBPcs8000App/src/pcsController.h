@@ -22,7 +22,9 @@
 #define PCS_C_FirstParamString           "PCS_C_FIRSTPARAM"
 #define PCS_C_SeqStateString             "SEQ_STATE"
 #define PCS_C_XmlSequencerString         "XML_SEQ"
-#define NUM_OF_PCS_PARAMS   3
+#define PCS_C_XmlSequencerAckString      "XML_ACK"
+#define PCS_C_StartSequencerString       "SEQ_START"
+#define NUM_OF_PCS_PARAMS   5
 
 // Items used for initial handshaking
 #define NAME "DLS"
@@ -120,6 +122,7 @@ public:
 
     /* Method to override */
     asynStatus writeOctet(asynUser *pasynUser, const char *value, size_t nChars, size_t *nActual);
+    asynStatus writeInt32(asynUser *pasynUser, epicsInt32 value);
     void udpReadTask();
     static void tcpClientConnectedCallback(void *drvPvt, asynUser *pasynUser, char *portName,
                                            size_t len, int eomReason);
@@ -145,6 +148,8 @@ protected:
     int PCS_C_FirstParam;
     int PCS_C_SeqState;
     int PCS_C_XmlSequencer;
+    int PCS_C_XmlSequencerAck;
+    int PCS_C_StartSequencer;
     char outString_[MAX_CONTROLLER_STRING_SIZE];
     char inString_[MAX_CONTROLLER_STRING_SIZE];
 

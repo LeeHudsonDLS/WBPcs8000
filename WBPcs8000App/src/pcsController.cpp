@@ -167,6 +167,8 @@ void pcsController::createAsynParams(void){
     status = createParam(PCS_C_FirstParamString,asynParamInt32,&PCS_C_FirstParam);
     status = createParam(PCS_C_SeqStateString,asynParamInt32,&PCS_C_SeqState);
     status = createParam(PCS_C_XmlSequencerString,asynParamOctet,&PCS_C_XmlSequencer);
+    status = createParam(PCS_C_XmlSequencerAckString,asynParamInt32,&PCS_C_XmlSequencerAck);
+    status = createParam(PCS_C_StartSequencerString,asynParamInt32,&PCS_C_StartSequencer);
 
 }
 
@@ -417,21 +419,48 @@ void pcsController::udpReadTask() {
 
 }
 
+asynStatus pcsController::writeInt32(asynUser *pasynUser, epicsInt32 value) {
+    pcsAxis* pAxis;
+    pAxis = getAxis(pasynUser);
+
+    if(pasynUser->reason == PCS_C_StartSequencer){
+        printf("Start!!\n");
+        pAxis->setIntegerParam(PCS_C_StartSequencer,1);
+    }
+
+}
 
 asynStatus pcsController::writeOctet(asynUser *pasynUser, const char *value, size_t nChars, size_t *nActual) {
 
-    /*
-     * Need method to determine if string resembles a sequencer
-     */
+    pcsAxis* pAxis;
+
+    pAxis = getAxis(pasynUser);
+    printf("writeOctet for axis %d called %s\n",pAxis->axisNo_,value);
+
     if(pasynUser->reason == PCS_C_XmlSequencer){
         if(Sequencer::isStringXML(value)){
+            lock();
+            pAxis->setStringParam(PCS_C_XmlSequencer,value);
+            unlock();
             sprintf(outString_,value);
             writeReadController();
-            if(Sequencer::containsAck(inString_))
-                printf("got ack\n");
+            if(Sequencer::containsAck(inString_)){
+                lock();
+                pAxis->setIntegerParam(PCS_C_XmlSequencerAck,1);
+                unlock();
+            }else {
+                lock();
+                pAxis->setIntegerParam(PCS_C_XmlSequencerAck, 0);
+                unlock();
+            }
+        }else{
+            lock();
+            pAxis->setIntegerParam(PCS_C_XmlSequencerAck,0);
+            unlock();
         }
     }
 
+    callParamCallbacks();
     *nActual = strlen(value);
     return asynSuccess;
 }

@@ -2,6 +2,7 @@
 #% macro, P, Device Prefix
 #% macro, M, Device Suffix
 #% macro, PORT, Asyn Port name
+#% gui, $(PORT), edmtab, seqControl.edl, P=$(P),M=$(M)
 
 record(bi, "$(P)$(M):SequencerState_RBV") {
    field(DTYP, "asynInt32")
@@ -19,4 +20,47 @@ record(waveform, "$(P)$(M):SequencerXML")
   field(INP,  "@asyn($(PORT),$(AXIS_NO))XML_SEQ")
   field(NELM, "4096")
   field(SCAN, "Passive")
+}
+
+record(waveform, "$(P)$(M):SequencerXML_RBV")
+{
+  field(DTYP, "asynOctetRead")
+  field(FTVL, "CHAR")
+  field(INP,  "@asyn($(PORT),$(AXIS_NO))XML_SEQ")
+  field(NELM, "4096")
+  field(SCAN, "I/O Intr")
+}
+
+record(bi, "$(P)$(M):SequencerAck_RBV") {
+   field(DTYP, "asynInt32")
+   field(INP, "@asyn($(PORT),$(AXIS_NO))XML_ACK")
+   field(ZNAM, "Error")
+   field(ONAM, "OK")
+   field(VAL,  "0")
+   field(SCAN, "I/O Intr")
+}
+
+record(bo, "$(P)$(M):Start") {
+   field(DTYP, "asynInt32")
+   field(OUT, "@asyn($(PORT),$(AXIS_NO))SEQ_START")
+   field(ZNAM, "Done")
+   field(ONAM, "Running")
+   field(VAL,  "0")
+   field(FLNK, "$(P)$(M):SetStartBusy")
+}
+
+record(calcout, "$(P)$(M):SetStartBusy")
+{
+    field(INPA, "$(P)$(M):Start NPP")
+    field(CALC, "A")
+    field(OOPT, "Transition To Non-zero")
+    field(OUT,  "$(P)$(M):StartBusy PP")
+}
+
+record(busy, "$(P)$(M):StartBusy") {
+   field(ZNAM, "Done")
+   field(ZSV,  "NO_ALARM")
+   field(ONAM, "Running")
+   field(OSV,  "MINOR")
+   field(VAL,  "0")
 }

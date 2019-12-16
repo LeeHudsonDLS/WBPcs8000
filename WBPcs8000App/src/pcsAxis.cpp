@@ -47,7 +47,7 @@ void pcsAxis::initialise(int axisNo) {
 
 asynStatus pcsAxis::move(double position, int relative, double minVelocity, double maxVelocity, double acceleration){
 
-    size_t nwrite,nread;
+    size_t nwrite,nread,nact;
     int eomReason;
     asynStatus status = asynSuccess;
     static const char *functionName = "move";
@@ -111,6 +111,11 @@ asynStatus pcsAxis::move(double position, int relative, double minVelocity, doub
     // Send the sequencer to the controller
     sprintf(ctrl_->outString_,seqBuffer);
     status = ctrl_->writeReadController();
+
+    /* Update asyn param to allow what's sequencer is loaded to be visible */
+    ctrl_->lock();
+    setStringParam(ctrl_->PCS_C_XmlSequencer,seqBuffer);
+    ctrl_->unlock();
 
     // Send the command to start the sequencer
     sprintf(ctrl_->outString_,ctrl_->commandConstructor.getXml(axisNo_,SEQ_CONTROL_PARAM,"Program").c_str());
