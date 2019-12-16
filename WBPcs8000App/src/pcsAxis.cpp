@@ -109,14 +109,13 @@ asynStatus pcsAxis::move(double position, int relative, double minVelocity, doub
     sprintf(seqBuffer,absoluteMoveSequencer.getXml().c_str());
 
     // Send the sequencer to the controller
-    pasynOctetSyncIO->setInputEos(ctrl_->pasynUserController_,"</sequencer_prog>",strlen("</sequencer_prog>"));
-    status = pasynOctetSyncIO->writeRead(ctrl_->pasynUserController_,seqBuffer,strlen(seqBuffer),rxBuffer,1024,0.1,&nwrite,&nread,&eomReason);
-
+    sprintf(ctrl_->outString_,seqBuffer);
+    status = ctrl_->writeReadController();
 
     // Send the command to start the sequencer
-    ctrl_->inString_[0]='\0';
     sprintf(ctrl_->outString_,ctrl_->commandConstructor.getXml(axisNo_,SEQ_CONTROL_PARAM,"Program").c_str());
-    status = pasynOctetSyncIO->writeRead(ctrl_->pasynUserController_,ctrl_->commandConstructor.getXml(axisNo_,SEQ_CONTROL_PARAM,"Program").c_str(),strlen(ctrl_->commandConstructor.getXml(axisNo_,SEQ_CONTROL_PARAM,"Program").c_str()),rxBuffer,1024,0.1,&nwrite,&nread,&eomReason);
+    status = ctrl_->writeReadController();
+
 
     asynPrint(ctrl_->pasynUserSelf, ASYN_TRACE_FLOW, "%s\n", functionName);
     setIntegerParam(ctrl_->motorStatusDone_,1);

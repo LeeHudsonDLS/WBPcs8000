@@ -99,5 +99,9 @@ std::string Sequencer::getXml() {
     while ((pos = commandString.find(startElement)) != std::string::npos)
         commandString.replace(pos, startElement.size(),"<start></start>");
 
+    /* Remove the \n that seems to come in from xmlDocDumpFormatMemory*/
+    //if(commandString[commandString.size()-1]!='>')
+        //commandString.replace(commandString.size()-1, 1,"\0");
+
     return commandString;
 }

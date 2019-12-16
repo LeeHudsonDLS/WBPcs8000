@@ -424,7 +424,9 @@ asynStatus pcsController::writeOctet(asynUser *pasynUser, const char *value, siz
      * Need method to determine if string resembles a sequencer
      */
     if(pasynUser->reason == PCS_C_XmlSequencer){
+        if(Sequencer::isStringXML(value)){
 
+        }
     }
 
     *nActual = strlen(value);
@@ -488,12 +490,20 @@ asynStatus pcsController::writeReadController() {
     if(Sequencer::isStringXML(outString_)){
 
         xmlEosCounter = commandLength-1;
+
+        /* Make sure the last character is >. Temp measure to chop off \n that is sometimes appended.*/
+        while(outString_[commandLength-1]!='>'){
+            outString_[commandLength-1]='\0';
+            commandLength--;
+        }
+
         /* Find the start of the last xml element */
         while(outString_[xmlEosCounter] != '<'){
             xmlEosCounter--;
         }
         /* EOS is the last element in the XML */
         eos=&outString_[xmlEosCounter];
+        printf("Last char : %c\n",outString_[commandLength-1]);
 
     }else{
         /* Command is not XML so EOS is the usual \r\n */
@@ -505,7 +515,7 @@ asynStatus pcsController::writeReadController() {
                                          strlen((outString_)),
                                          inString_,
                                          returnSize,
-                                         2.0,
+                                         DEFAULT_CONTROLLER_TIMEOUT,
                                          &nbytesOut,
                                          &nbytesIn,
                                          &eomReason);
@@ -525,7 +535,7 @@ asynStatus pcsController::writeReadController() {
         status = pasynOctetSyncIO->read(pasynUserController_,
                                         &inString_[nread],
                                         returnSize-nread,
-                                        0.5,
+                                        DEFAULT_CONTROLLER_TIMEOUT,
                                         &nbytesIn,
                                         &eomReason);
         asynPrint(pasynUserController_, ASYN_TRACEIO_DRIVER,
@@ -539,9 +549,6 @@ asynStatus pcsController::writeReadController() {
 
 }
 
-void pcsController::_errorFunc(void *ctxt, char *msg, ...) {
-    printf("Error func\n");
-}
 
 /** Configuration command, called directly or from iocsh.
   * \param[in] portName The name of this asyn port.

@@ -17,6 +17,8 @@
 #include <vector>
 #include "XmlCommandConstructor.h"
 
+#undef MAX_CONTROLLER_STRING_SIZE
+#define MAX_CONTROLLER_STRING_SIZE 2048
 #define PCS_C_FirstParamString           "PCS_C_FIRSTPARAM"
 #define PCS_C_SeqStateString             "SEQ_STATE"
 #define PCS_C_XmlSequencerString         "XML_SEQ"
@@ -135,7 +137,6 @@ public:
     void* octetPvt;
     int scale;
     int axesInitialised;
-    void _errorFunc(void* ctxt, char* msg, ...);
 
 
 
@@ -144,6 +145,8 @@ protected:
     int PCS_C_FirstParam;
     int PCS_C_SeqState;
     int PCS_C_XmlSequencer;
+    char outString_[MAX_CONTROLLER_STRING_SIZE];
+    char inString_[MAX_CONTROLLER_STRING_SIZE];
 
 
     /* Overriding this method as we don't know what the EOS is going to be*/
@@ -152,7 +155,6 @@ protected:
     template <typename T>
     asynStatus sendXmlCommand(int axisNo,const std::string& parameter,T value);
     asynStatus sendXmlCommand(int axisNo,const std::string& parameter);
-    asynStatus sendXmlCommandToHardware(const std::string& eos);
 
 
 #define FIRST_PCS_PARAM PCS_C_FirstParam
