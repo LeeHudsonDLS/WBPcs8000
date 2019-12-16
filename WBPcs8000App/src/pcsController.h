@@ -135,6 +135,7 @@ public:
     void* octetPvt;
     int scale;
     int axesInitialised;
+    void _errorFunc(void* ctxt, char* msg, ...);
 
 
 
@@ -143,6 +144,11 @@ protected:
     int PCS_C_FirstParam;
     int PCS_C_SeqState;
     int PCS_C_XmlSequencer;
+
+
+    /* Overriding this method as we don't know what the EOS is going to be*/
+    asynStatus writeReadController();
+
     template <typename T>
     asynStatus sendXmlCommand(int axisNo,const std::string& parameter,T value);
     asynStatus sendXmlCommand(int axisNo,const std::string& parameter);

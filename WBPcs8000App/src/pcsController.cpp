@@ -9,6 +9,14 @@
 #include <cantProceed.h>
 #include <epicsString.h>
 
+
+/* libxml error functions */
+void structuredErrorFunc(void *userData, xmlErrorPtr error) {
+}
+
+void genericErrorFunc(void *ctx, const char * msg, ...) {
+}
+
 static void udpReadTaskC(void *drvPvt)
 {
     pcsController *pPvt = (pcsController *)drvPvt;
@@ -46,6 +54,10 @@ pcsController::pcsController(const char *portName, int lowLevelPortAddress, int 
 
     driverName = "pcsController";
 
+    /*Supress libxml2 error messages*/
+    //xmlGenericErrorFunc handler = (xmlGenericErrorFunc)NULL;
+    //initGenericErrorDefaultFunc(&handler);
+
     //Add portname suffix
     lowLevelPortName = (char*)malloc(strlen(portName)+strlen(MAIN_PORT_SUFFIX)+1);
     streamPortName = (char*)malloc(strlen(portName)+strlen(STREAMS_PORT_SUFFIX)+1);
@@ -62,6 +74,10 @@ pcsController::pcsController(const char *portName, int lowLevelPortAddress, int 
         asynPrint(this->pasynUserSelf, ASYN_TRACE_ERROR,
                   "%s: cannot connect to pcs controller\n",functionName);
     }
+
+    /* Supress libxml2 errors as we expect them*/
+    xmlSetGenericErrorFunc(NULL, genericErrorFunc);
+    xmlSetStructuredErrorFunc(NULL, structuredErrorFunc);
 
     // Initial handshaking
     sprintf(outString_,"");
@@ -422,6 +438,7 @@ asynStatus pcsController::writeOctet(asynUser *pasynUser, const char *value, siz
  */
 asynStatus pcsController::sendXmlCommandToHardware(const std::string& parameter) {
     asynStatus status;
+
     status = pasynOctetSyncIO->setInputEos(pasynUserController_, parameter.c_str(),2);
     if (status != asynSuccess) {
         asynPrint(pasynUserSelf, ASYN_TRACE_ERROR,
@@ -465,6 +482,37 @@ asynStatus pcsController::sendXmlCommand(int axisNo, const std::string &paramete
     return sendXmlCommandToHardware(commandConstructor.getEos(parameter));
 }
 
+
+asynStatus pcsController::writeReadController() {
+
+    char* eos;
+    int xmlEosCounter,commandLength;
+
+    commandLength = strlen(outString_);
+
+
+    if(Sequencer::isStringXML(outString_)){
+
+        xmlEosCounter = commandLength-1;
+        /* Find the start of the last xml element */
+        while(outString_[xmlEosCounter] != '<'){
+            xmlEosCounter--;
+        }
+        /* EOS is the last element in the XML */
+        eos=&outString_[xmlEosCounter];
+
+    }else{
+        /* Command is not XML so EOS is the usual \r\n */
+        eos="\r\n";
+    }
+
+    asynMotorController::writeReadController();
+
+}
+
+void pcsController::_errorFunc(void *ctxt, char *msg, ...) {
+    printf("Error func\n");
+}
 
 /** Configuration command, called directly or from iocsh.
   * \param[in] portName The name of this asyn port.
