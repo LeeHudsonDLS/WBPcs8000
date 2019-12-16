@@ -81,11 +81,11 @@ pcsController::pcsController(const char *portName, int lowLevelPortAddress, int 
 
     // Initial handshaking
     sprintf(outString_,"");
-    status = writeReadController();
+    status = writeController();
     sprintf(outString_,"%s,%.2f,%d",NAME,VERSION,CODE);
     status = writeReadController();
 
-    if(strcmp(inString_,"OK")) {
+    if(strcmp(inString_,"OK\r\n")) {
         asynPrint(this->pasynUserSelf, ASYN_TRACE_ERROR,
                   "%s: Handshake with controller failed\n", functionName);
         status = asynError;
@@ -439,7 +439,7 @@ asynStatus pcsController::writeOctet(asynUser *pasynUser, const char *value, siz
 asynStatus pcsController::sendXmlCommandToHardware(const std::string& parameter) {
     asynStatus status;
 
-    status = pasynOctetSyncIO->setInputEos(pasynUserController_, parameter.c_str(),2);
+    //status = pasynOctetSyncIO->setInputEos(pasynUserController_, parameter.c_str(),2);
     if (status != asynSuccess) {
         asynPrint(pasynUserSelf, ASYN_TRACE_ERROR,
                   "sendXmlCommand: error setting EOS\n");
@@ -485,9 +485,13 @@ asynStatus pcsController::sendXmlCommand(int axisNo, const std::string &paramete
 
 asynStatus pcsController::writeReadController() {
 
+    asynStatus status = asynSuccess;
     char* eos;
-    int xmlEosCounter,commandLength;
-
+    char rxBuffer[2048];
+    int xmlEosCounter,commandLength,eomReason,returnSize = 2048;
+    size_t  nwrite,nread;
+    size_t nbytesOut;
+    size_t nbytesIn;
     commandLength = strlen(outString_);
 
 
@@ -506,7 +510,41 @@ asynStatus pcsController::writeReadController() {
         eos="\r\n";
     }
 
-    asynMotorController::writeReadController();
+    status = pasynOctetSyncIO->writeRead(pasynUserController_,
+                                         outString_,
+                                         strlen((outString_)),
+                                         rxBuffer,
+                                         returnSize,
+                                         2.0,
+                                         &nbytesOut,
+                                         &nbytesIn,
+                                         &eomReason);
+    if ( status != asynSuccess ) {
+        asynPrint(pasynUserController_, ASYN_TRACE_ERROR,
+                  "SendAndReceive error calling writeRead, output=%s status=%d, error=%s\n",
+                  outString_, status, pasynUserController_->errorMessage);
+    }
+    asynPrint(pasynUserController_, ASYN_TRACEIO_DRIVER,
+              "SendAndReceive, sent: '%s', received: '%s'\n",
+              outString_, rxBuffer);
+    nread = nbytesIn;
+    /* Loop until we the response contains ",EndOfAPI" or we get an error */
+    while ((status==asynSuccess) &&
+           (strcmp(rxBuffer + nread - strlen(eos), eos) != 0)) {
+        status = pasynOctetSyncIO->read(pasynUserController_,
+                                        &rxBuffer[nread],
+                                        returnSize-nread,
+                                        0.5,
+                                        &nbytesIn,
+                                        &eomReason);
+        asynPrint(pasynUserController_, ASYN_TRACEIO_DRIVER,
+              "SendAndReceive, received: nread=%d, returnSize-nread=%d, nbytesIn=%d\n",
+              (int)nread, returnSize-nread, (int)nbytesIn);
+        nread += nbytesIn;
+    }
+
+    printf("rxbuff: %s\n",rxBuffer);
+    sprintf(inString_,rxBuffer);
 
 }
 
