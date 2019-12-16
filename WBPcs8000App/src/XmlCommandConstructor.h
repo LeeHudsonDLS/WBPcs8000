@@ -21,7 +21,6 @@ public:
     std::string getXml(int axis, const std::string& parameter);
     std::string getXml(int axis, const std::string& parameter, int val);
     std::string getXml(int axis, const std::string& parameter, std::string val);
-    std::string getEos(const std::string& parameter);
     std::string dumpXml();
 
 private:

@@ -2,7 +2,7 @@
 #% macro, P, Device Prefix
 #% macro, M, Device Suffix
 #% macro, PORT, Asyn Port name
-#% gui, $(PORT), edmtab, seqControl.edl, P=$(P),M=$(M)
+#% gui, $(PORT):$(AXIS_NO) , edmtab, seqControl.edl, P=$(P),M=$(M)
 
 record(bi, "$(P)$(M):SequencerState_RBV") {
    field(DTYP, "asynInt32")
@@ -45,22 +45,5 @@ record(bo, "$(P)$(M):Start") {
    field(OUT, "@asyn($(PORT),$(AXIS_NO))SEQ_START")
    field(ZNAM, "Done")
    field(ONAM, "Running")
-   field(VAL,  "0")
-   field(FLNK, "$(P)$(M):SetStartBusy")
-}
-
-record(calcout, "$(P)$(M):SetStartBusy")
-{
-    field(INPA, "$(P)$(M):Start NPP")
-    field(CALC, "A")
-    field(OOPT, "Transition To Non-zero")
-    field(OUT,  "$(P)$(M):StartBusy PP")
-}
-
-record(busy, "$(P)$(M):StartBusy") {
-   field(ZNAM, "Done")
-   field(ZSV,  "NO_ALARM")
-   field(ONAM, "Running")
-   field(OSV,  "MINOR")
    field(VAL,  "0")
 }

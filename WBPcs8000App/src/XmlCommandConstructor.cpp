@@ -204,20 +204,3 @@ std::string XmlCommandConstructor::dumpXml() {
     }
 
 }
-
-std::string XmlCommandConstructor::getEos(const std::string &parameter) {
-    std::map<std::string,std::vector<std::string> >::iterator commandMapIter;
-    std::map<std::string,std::vector<std::string> >::iterator inputMapIter;
-
-    commandMapIter=commandMap.find(parameter);
-    inputMapIter=inputMap.find(parameter);
-
-    if(commandMapIter!=commandMap.end()){
-        return commandMapIter->second[1];
-    }
-
-    if(inputMapIter!=inputMap.end()){
-        return inputMapIter->second[1];
-    }
-    return "";
-}
