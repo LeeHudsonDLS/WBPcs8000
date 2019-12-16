@@ -478,7 +478,6 @@ asynStatus pcsController::writeReadController() {
 
     asynStatus status = asynSuccess;
     char* eos;
-    char rxBuffer[2048];
     int xmlEosCounter,commandLength,eomReason,returnSize = 2048;
     size_t  nwrite,nread;
     size_t nbytesOut;
@@ -504,7 +503,7 @@ asynStatus pcsController::writeReadController() {
     status = pasynOctetSyncIO->writeRead(pasynUserController_,
                                          outString_,
                                          strlen((outString_)),
-                                         rxBuffer,
+                                         inString_,
                                          returnSize,
                                          2.0,
                                          &nbytesOut,
@@ -518,13 +517,13 @@ asynStatus pcsController::writeReadController() {
     }
     asynPrint(pasynUserController_, ASYN_TRACEIO_DRIVER,
               "SendAndReceive, sent: '%s', received: '%s'\n",
-              outString_, rxBuffer);
+              outString_, inString_);
     nread = nbytesIn;
     /* Loop until we the response contains the eos or we get an error */
     while ((status==asynSuccess) &&
-           (strcmp(rxBuffer + nread - strlen(eos), eos) != 0)) {
+           (strcmp(inString_ + nread - strlen(eos), eos) != 0)) {
         status = pasynOctetSyncIO->read(pasynUserController_,
-                                        &rxBuffer[nread],
+                                        &inString_[nread],
                                         returnSize-nread,
                                         0.5,
                                         &nbytesIn,
@@ -536,7 +535,6 @@ asynStatus pcsController::writeReadController() {
     }
 
 
-    sprintf(inString_,rxBuffer);
     return status;
 
 }
