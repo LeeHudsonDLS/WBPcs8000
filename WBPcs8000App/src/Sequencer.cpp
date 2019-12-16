@@ -29,6 +29,15 @@ bool Sequencer::isStringXML(const std::string &xmlString) {
 
 }
 
+bool Sequencer::containsAck(const std::string &xmlString){
+
+    if (xmlString.find("<ackn>OK</ackn>") != std::string::npos)
+        return true;
+    else
+        return false;
+
+}
+
 int Sequencer::setElement(const std::string& xPath, const std::string& value) {
 
     xmlChar *xpath = (xmlChar*) xPath.c_str();

@@ -17,6 +17,7 @@ public:
     int setElement(const std::string& xPath, const int& value);
     int setElement(const std::string& xPath, const double& value);
     static bool isStringXML(const std::string& xmlString);
+    static bool containsAck(const std::string& xmlString);
     std::string getXml();
 private:
     xmlDocPtr pDoc;

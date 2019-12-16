@@ -425,7 +425,10 @@ asynStatus pcsController::writeOctet(asynUser *pasynUser, const char *value, siz
      */
     if(pasynUser->reason == PCS_C_XmlSequencer){
         if(Sequencer::isStringXML(value)){
-
+            sprintf(outString_,value);
+            writeReadController();
+            if(Sequencer::containsAck(inString_))
+                printf("got ack\n");
         }
     }
 
