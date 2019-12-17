@@ -115,6 +115,7 @@ asynStatus pcsAxis::move(double position, int relative, double minVelocity, doub
     /* Update asyn param to allow what's sequencer is loaded to be visible */
     ctrl_->lock();
     setStringParam(ctrl_->PCS_C_XmlSequencer,seqBuffer);
+    setIntegerParam(ctrl_->PCS_C_UserXmlLoaded, 0);
     ctrl_->unlock();
 
     // Send the command to start the sequencer

@@ -31,9 +31,9 @@ record(waveform, "$(P)$(M):SequencerXML_RBV")
   field(SCAN, "I/O Intr")
 }
 
-record(bi, "$(P)$(M):SequencerAck_RBV") {
+record(bi, "$(P)$(M):UserXmlLoaded_RBV") {
    field(DTYP, "asynInt32")
-   field(INP, "@asyn($(PORT),$(AXIS_NO))XML_ACK")
+   field(INP, "@asyn($(PORT),$(AXIS_NO))USER_XML_LOADED")
    field(ZNAM, "Error")
    field(ONAM, "OK")
    field(VAL,  "0")
@@ -44,6 +44,41 @@ record(bo, "$(P)$(M):Start") {
    field(DTYP, "asynInt32")
    field(OUT, "@asyn($(PORT),$(AXIS_NO))SEQ_START")
    field(ZNAM, "Done")
-   field(ONAM, "Running")
+   field(ONAM, "Run")
    field(VAL,  "0")
+   field(FLNK, "$(P)$(M):SetStartBusy")
+   info(asyn:READBACK, "1")
+}
+
+record(bi, "$(P)$(M):Start_RBV") {
+   field(DTYP, "asynInt32")
+   field(OUT, "@asyn($(PORT),$(AXIS_NO))SEQ_START")
+   field(ZNAM, "Done")
+   field(ONAM, "Running")
+   field(ZSV,  "NO_ALARM")
+   field(OSV,  "MINOR")
+   field(SCAN, "I/O Intr")
+}
+
+record(calcout, "$(P)$(M):SetStartBusy")
+{
+    field(INPA, "$(P)$(M):Start NPP")
+    field(CALC, "A")
+    field(OOPT, "Transition To Non-zero")
+    field(OUT,  "$(P)$(M):StartBusy PP")
+}
+
+record(busy, "$(P)$(M):StartBusy") {
+   field(ZNAM, "Idle")
+   field(ZSV,  "NO_ALARM")
+   field(ONAM, "Running")
+   field(OSV,  "MINOR")
+   field(VAL,  "0")
+}
+
+record(calcout, "$(P)$(M):ClearStartBusy") {
+    field(INPA, "$(P)$(M):SequencerState_RBV CP")
+    field(CALC, "A")
+    field(OOPT, "Transition To Zero")
+    field(OUT,  "$(P)$(M):StartBusy PP")
 }

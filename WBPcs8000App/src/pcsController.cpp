@@ -167,7 +167,7 @@ void pcsController::createAsynParams(void){
     status = createParam(PCS_C_FirstParamString,asynParamInt32,&PCS_C_FirstParam);
     status = createParam(PCS_C_SeqStateString,asynParamInt32,&PCS_C_SeqState);
     status = createParam(PCS_C_XmlSequencerString,asynParamOctet,&PCS_C_XmlSequencer);
-    status = createParam(PCS_C_XmlSequencerAckString,asynParamInt32,&PCS_C_XmlSequencerAck);
+    status = createParam(PCS_C_UserXmlLoadedString, asynParamInt32, &PCS_C_UserXmlLoaded);
     status = createParam(PCS_C_StartSequencerString,asynParamInt32,&PCS_C_StartSequencer);
 
 }
@@ -342,6 +342,7 @@ void pcsController::eventListener(pcsController::portData *pPvt) {
                     if(PACKET.ev_value == 2) {
                         pAxis->setIntegerParam(motorStatusDone_, 1);
                         pAxis->setIntegerParam(PCS_C_SeqState,0);
+                        pAxis->setIntegerParam(PCS_C_StartSequencer,0);
                     }
                     if(PACKET.ev_value == 3) {
                         pAxis->setIntegerParam(motorStatusDone_, 0);
@@ -424,12 +425,14 @@ asynStatus pcsController::writeInt32(asynUser *pasynUser, epicsInt32 value) {
     pAxis = getAxis(pasynUser);
 
     if(pasynUser->reason == PCS_C_StartSequencer){
-        printf("Start!!\n");
-        pAxis->setIntegerParam(PCS_C_StartSequencer,1);
+        pAxis->setIntegerParam(PCS_C_StartSequencer,value);
 
-        sprintf(outString_,commandConstructor.getXml(pAxis->axisNo_,SEQ_CONTROL_PARAM,"Program").c_str());
+        if(value)
+            sprintf(outString_, commandConstructor.getXml(pAxis->axisNo_, SEQ_CONTROL_PARAM, "Program").c_str());
+        else
+            sprintf(outString_, commandConstructor.getXml(pAxis->axisNo_, SEQ_CONTROL_PARAM, "Setup").c_str());
         writeReadController();
-        if(Sequencer::containsAck(inString_)){
+        if (Sequencer::containsAck(inString_)) {
             /*Do something*/
         }
     }
@@ -439,12 +442,12 @@ asynStatus pcsController::writeInt32(asynUser *pasynUser, epicsInt32 value) {
 asynStatus pcsController::writeOctet(asynUser *pasynUser, const char *value, size_t nChars, size_t *nActual) {
 
     pcsAxis* pAxis;
-
     pAxis = getAxis(pasynUser);
-    printf("writeOctet for axis %d called %s\n",pAxis->axisNo_,value);
 
+    /* User has sent a custom sequencer */
     if(pasynUser->reason == PCS_C_XmlSequencer){
         if(Sequencer::isStringXML(value)){
+
             /* Update the asyn parameter*/
             lock();
             pAxis->setStringParam(PCS_C_XmlSequencer,value);
@@ -454,20 +457,20 @@ asynStatus pcsController::writeOctet(asynUser *pasynUser, const char *value, siz
             sprintf(outString_,value);
             writeReadController();
 
-            /* Determine if the PCS8000 is happy with the sequencer, if so start it */
+            /* Determine if the PCS8000 is happy with the sequencer */
             if(Sequencer::containsAck(inString_)){
                 lock();
-                pAxis->setIntegerParam(PCS_C_XmlSequencerAck,1);
+                pAxis->setIntegerParam(PCS_C_UserXmlLoaded, 1);
                 unlock();
             }else {
                 lock();
-                pAxis->setIntegerParam(PCS_C_XmlSequencerAck, 0);
+                pAxis->setIntegerParam(PCS_C_UserXmlLoaded, 0);
                 unlock();
             }
 
         }else{
             lock();
-            pAxis->setIntegerParam(PCS_C_XmlSequencerAck,0);
+            pAxis->setIntegerParam(PCS_C_UserXmlLoaded, 0);
             unlock();
         }
     }

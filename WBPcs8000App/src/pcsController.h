@@ -22,7 +22,7 @@
 #define PCS_C_FirstParamString           "PCS_C_FIRSTPARAM"
 #define PCS_C_SeqStateString             "SEQ_STATE"
 #define PCS_C_XmlSequencerString         "XML_SEQ"
-#define PCS_C_XmlSequencerAckString      "XML_ACK"
+#define PCS_C_UserXmlLoadedString      "USER_XML_LOADED"
 #define PCS_C_StartSequencerString       "SEQ_START"
 #define NUM_OF_PCS_PARAMS   5
 
@@ -148,7 +148,7 @@ protected:
     int PCS_C_FirstParam;
     int PCS_C_SeqState;
     int PCS_C_XmlSequencer;
-    int PCS_C_XmlSequencerAck;
+    int PCS_C_UserXmlLoaded;
     int PCS_C_StartSequencer;
     char outString_[MAX_CONTROLLER_STRING_SIZE];
     char inString_[MAX_CONTROLLER_STRING_SIZE];

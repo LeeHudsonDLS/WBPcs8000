@@ -3,8 +3,8 @@ beginScreenProperties
 major 4
 minor 0
 release 1
-x 357
-y 383
+x 937
+y 601
 w 500
 h 470
 font "arial-bold-r-12.0"
@@ -31,7 +31,7 @@ major 10
 minor 0
 release 0
 x 5
-y 165
+y 190
 w 485
 h 275
 controlPv "$(P)$(M):SequencerXML_RBV"
@@ -41,29 +41,16 @@ fill
 font "arial-medium-r-14.0"
 endObjectProperties
 
-# (Group)
-object activeGroupClass
-beginObjectProperties
-major 4
-minor 0
-release 0
-x 5
-y 10
-w 185
-h 150
-
-beginGroup
-
 # (Rectangle)
 object activeRectangleClass
 beginObjectProperties
 major 4
 minor 0
 release 0
-x 5
-y 15
+x 0
+y 10
 w 185
-h 145
+h 175
 lineColor index 14
 fill
 fillColor index 3
@@ -75,8 +62,8 @@ beginObjectProperties
 major 4
 minor 1
 release 1
-x 5
-y 10
+x 0
+y 5
 w 75
 h 13
 font "arial-medium-r-12.0"
@@ -95,8 +82,8 @@ beginObjectProperties
 major 4
 minor 4
 release 0
-x 10
-y 135
+x 5
+y 160
 w 175
 h 20
 fgColor index 43
@@ -118,8 +105,8 @@ beginObjectProperties
 major 4
 minor 0
 release 0
-x 10
-y 100
+x 5
+y 125
 w 175
 h 30
 
@@ -131,8 +118,8 @@ beginObjectProperties
 major 4
 minor 1
 release 1
-x 12
-y 100
+x 7
+y 125
 w 75
 h 30
 font "arial-bold-r-12.0"
@@ -140,7 +127,7 @@ fgColor index 14
 bgColor index 3
 useDisplayBg
 value {
-  "Acquire"
+  "Run"
 }
 endObjectProperties
 
@@ -150,8 +137,8 @@ beginObjectProperties
 major 4
 minor 0
 release 0
-x 65
-y 105
+x 60
+y 130
 w 20
 h 20
 controlPv "$(P)$(M):Start"
@@ -168,8 +155,8 @@ beginObjectProperties
 major 4
 minor 1
 release 0
-x 92
-y 100
+x 87
+y 125
 w 45
 h 30
 fgColor index 19
@@ -192,8 +179,8 @@ beginObjectProperties
 major 4
 minor 1
 release 0
-x 142
-y 100
+x 137
+y 125
 w 45
 h 30
 fgColor index 21
@@ -220,8 +207,8 @@ beginObjectProperties
 major 4
 minor 0
 release 0
-x 10
-y 60
+x 7
+y 55
 w 175
 h 30
 
@@ -233,11 +220,11 @@ beginObjectProperties
 major 4
 minor 0
 release 0
-x 167
-y 65
+x 162
+y 60
 w 20
 h 20
-controlPv "$(P)$(M):SequencerAck_RBV"
+controlPv "$(P)$(M):SequencerState_RBV"
 lineColor index 14
 onColor index 15
 offColor index 19
@@ -251,16 +238,16 @@ beginObjectProperties
 major 4
 minor 1
 release 1
-x 12
-y 60
-w 75
+x 7
+y 55
+w 135
 h 30
 font "arial-bold-r-12.0"
 fgColor index 14
 bgColor index 3
 useDisplayBg
 value {
-  "Valid XML:"
+  "Sequencer Running:"
 }
 endObjectProperties
 
@@ -274,31 +261,12 @@ beginObjectProperties
 major 4
 minor 0
 release 0
-x 10
-y 30
+x 5
+y 25
 w 175
 h 30
 
 beginGroup
-
-# (Static Text)
-object activeXTextClass
-beginObjectProperties
-major 4
-minor 1
-release 1
-x 12
-y 30
-w 135
-h 30
-font "arial-bold-r-12.0"
-fgColor index 14
-bgColor index 3
-useDisplayBg
-value {
-  "Sequencer Running:"
-}
-endObjectProperties
 
 # (Byte)
 object ByteClass
@@ -306,11 +274,11 @@ beginObjectProperties
 major 4
 minor 0
 release 0
-x 167
-y 35
+x 162
+y 30
 w 20
 h 20
-controlPv "$(P)$(M):SequencerState_RBV"
+controlPv "$(P)$(M):StartBusy"
 lineColor index 14
 onColor index 15
 offColor index 19
@@ -318,8 +286,77 @@ lineWidth 2
 numBits 1
 endObjectProperties
 
+# (Static Text)
+object activeXTextClass
+beginObjectProperties
+major 4
+minor 1
+release 1
+x 7
+y 25
+w 135
+h 30
+font "arial-bold-r-12.0"
+fgColor index 14
+bgColor index 3
+useDisplayBg
+value {
+  "Busy:"
+}
+endObjectProperties
+
 endGroup
 
+endObjectProperties
+
+# (Group)
+object activeGroupClass
+beginObjectProperties
+major 4
+minor 0
+release 0
+x 5
+y 85
+w 177
+h 30
+
+beginGroup
+
+# (Byte)
+object ByteClass
+beginObjectProperties
+major 4
+minor 0
+release 0
+x 162
+y 90
+w 20
+h 20
+controlPv "$(P)$(M):UserXmlLoaded_RBV"
+lineColor index 14
+onColor index 15
+offColor index 19
+lineWidth 2
+numBits 1
+endObjectProperties
+
+# (Static Text)
+object activeXTextClass
+beginObjectProperties
+major 4
+minor 1
+release 1
+x 5
+y 85
+w 125
+h 30
+font "arial-bold-r-12.0"
+fgColor index 14
+bgColor index 3
+useDisplayBg
+value {
+  "User XML Loaded:"
+}
 endObjectProperties
 
 endGroup
