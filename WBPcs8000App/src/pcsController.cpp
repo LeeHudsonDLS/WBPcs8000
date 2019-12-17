@@ -318,7 +318,9 @@ void pcsController::eventListener(pcsController::portData *pPvt) {
     }
     while(1) {
         packetIndex = 0;
+        pasynOctetSyncIO->flush(pasynUser);
         pasynOctetSyncIO->read(pasynUser,rxBuffer,EVENT_PACKET_SIZE,-1,&nread,&eomReason);
+        //pasynOctetSyncIO->flush(pasynUser);
         if(nread>0) {
             //Manually unpack datagram
             memcpy(&PACKET.ev_code, &rxBuffer[packetIndex], 4);
