@@ -52,7 +52,7 @@ record(bo, "$(P)$(M):Start") {
 
 record(bi, "$(P)$(M):Start_RBV") {
    field(DTYP, "asynInt32")
-   field(OUT, "@asyn($(PORT),$(AXIS_NO))SEQ_START")
+   field(INP, "@asyn($(PORT),$(AXIS_NO))SEQ_START")
    field(ZNAM, "Done")
    field(ONAM, "Running")
    field(ZSV,  "NO_ALARM")

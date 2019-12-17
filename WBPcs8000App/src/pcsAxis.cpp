@@ -58,6 +58,8 @@ asynStatus pcsAxis::move(double position, int relative, double minVelocity, doub
     rxBuffer[0]='\0';
     ctrl_->inString_[0]='\0';
 
+
+
     /*
      * Determine the amount of time the axis will take to decelerate and the amount the axis will travel
      * during this deceleration.
@@ -107,6 +109,7 @@ asynStatus pcsAxis::move(double position, int relative, double minVelocity, doub
 
     // Get the completed sequncer in XML form
     sprintf(seqBuffer,absoluteMoveSequencer.getXml().c_str());
+    status = pasynOctetSyncIO->writeRead(ctrl_->pasynUserController_,ctrl_->commandConstructor.getXml(axisNo_,SEQ_CONTROL_PARAM,"Setup").c_str(),strlen(ctrl_->commandConstructor.getXml(axisNo_,SEQ_CONTROL_PARAM,"Setup").c_str()),rxBuffer,1024,0.1,&nwrite,&nread,&eomReason);
 
     // Send the sequencer to the controller
     sprintf(ctrl_->outString_,seqBuffer);
@@ -144,6 +147,7 @@ asynStatus pcsAxis::stop(double acceleration){
     char rxBuffer[1024];
 
     rxBuffer[0]='\0';
+    printf ("Stop called \n");
     // Put sequencer into "Setup" state to stop it and any associated movement.
     status = pasynOctetSyncIO->writeRead(ctrl_->pasynUserController_,ctrl_->commandConstructor.getXml(axisNo_,SEQ_CONTROL_PARAM,"Setup").c_str(),strlen(ctrl_->commandConstructor.getXml(axisNo_,SEQ_CONTROL_PARAM,"Setup").c_str()),rxBuffer,1024,0.1,&nwrite,&nread,&eomReason);
 
