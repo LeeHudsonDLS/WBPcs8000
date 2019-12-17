@@ -522,7 +522,13 @@ asynStatus pcsController::sendXmlCommand(int axisNo, const std::string &paramete
     return status;
 }
 
-
+/*
+ * Overriding from asynMotorController as the EOS from the PCS8000 isn't always the same and is usually greater
+ * than the 2 character maximum drvAsynIP allows. With noProcessEos = 1 (in builder) we read in until we find
+ * a specific string, this is usually the final <\..> in the XML command.
+ * @param outString_    The string to be sent to the controller
+ * @param inString_     The string storing the response from the controller
+ */
 asynStatus pcsController::writeReadController() {
 
     asynStatus status = asynSuccess;
@@ -532,7 +538,6 @@ asynStatus pcsController::writeReadController() {
     size_t nbytesOut;
     size_t nbytesIn;
     commandLength = strlen(outString_);
-
 
     if(Sequencer::isStringXML(outString_)){
 
@@ -590,10 +595,7 @@ asynStatus pcsController::writeReadController() {
               (int)nread, returnSize-nread, (int)nbytesIn);
         nread += nbytesIn;
     }
-
-
     return status;
-
 }
 
 
