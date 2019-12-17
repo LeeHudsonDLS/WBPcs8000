@@ -24,10 +24,9 @@ public:
     std::string dumpXml();
 
 private:
-    std::map<std::string,std::vector<std::string> > commandMap;
-    std::map<std::string,std::vector<std::string> > inputMap;
+    std::map<std::string,std::string > commandMap;
+    std::map<std::string,std::string > inputMap;
     std::string addXML(const std::string& csvCommand, const std::string& val);
     std::string appendSlave(int slave, std::string xml);
-    std::string extractEos(const std::string& xmlString);
     pcsController& ctrl;
 };
