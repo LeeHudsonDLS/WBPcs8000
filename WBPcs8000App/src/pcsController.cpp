@@ -426,6 +426,9 @@ asynStatus pcsController::writeInt32(asynUser *pasynUser, epicsInt32 value) {
     pcsAxis* pAxis;
     pAxis = getAxis(pasynUser);
 
+    if(pasynUser->reason < PCS_C_FirstParam){
+        asynMotorController::writeInt32(pasynUser,value);
+    }
     if(pasynUser->reason == PCS_C_StartSequencer){
         pAxis->setIntegerParam(PCS_C_StartSequencer,value);
 
