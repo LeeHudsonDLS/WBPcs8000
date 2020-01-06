@@ -19,12 +19,26 @@
 
 #undef MAX_CONTROLLER_STRING_SIZE
 #define MAX_CONTROLLER_STRING_SIZE 2048
-#define PCS_C_FirstParamString           "PCS_C_FIRSTPARAM"
-#define PCS_C_SeqStateString             "SEQ_STATE"
-#define PCS_C_XmlSequencerString         "XML_SEQ"
-#define PCS_C_UserXmlLoadedString      "USER_XML_LOADED"
-#define PCS_C_StartSequencerString       "SEQ_START"
-#define NUM_OF_PCS_PARAMS   5
+#define MAX_SLAVES 8
+#define PCS_C_FirstParamString      "PCS_C_FIRSTPARAM"
+#define PCS_A_kpParamString         "AXIS_KP"
+#define PCS_A_tiParamString         "AXIS_TI"
+#define PCS_A_tdParamString         "AXIS_TD"
+#define PCS_A_t1ParamString         "AXIS_T1"
+#define PCS_A_keParamString         "AXIS_KE"
+#define PCS_A_ke2ParamString        "AXIS_KE2"
+#define PCS_A_kffParamString        "AXIS_KFF"
+#define PCS_A_kreiParamString       "AXIS_KREI"
+#define PCS_A_tauParamString        "AXIS_TAU"
+#define PCS_A_elimParamString       "AXIS_ELIM"
+#define PCS_A_kdccParamString       "AXIS_KDCC"
+#define PCS_A_symManParamString     "AXIS_SYM_MAN"
+#define PCS_A_symAdpParamString     "AXIS_SYM_ADP"
+#define PCS_A_gkiParamString        "AXIS_GKI"
+#define PCS_A_tkiParamString        "AXIS_TKI"
+#define PCS_A_pkParamString         "AXIS_PK"
+
+#define NUM_OF_PCS_PARAMS   17+(MAX_SLAVES*4)
 
 // Items used for initial handshaking
 #define NAME "DLS"
@@ -123,6 +137,7 @@ public:
     /* Method to override */
     asynStatus writeOctet(asynUser *pasynUser, const char *value, size_t nChars, size_t *nActual);
     asynStatus writeInt32(asynUser *pasynUser, epicsInt32 value);
+    asynStatus writeFloat64(asynUser *pasynUser, epicsFloat64 value);
     void udpReadTask();
     static void tcpClientConnectedCallback(void *drvPvt, asynUser *pasynUser, char *portName,
                                            size_t len, int eomReason);
@@ -146,10 +161,15 @@ public:
 protected:
     /* Asyn parameters */
     int PCS_C_FirstParam;
-    int PCS_C_SeqState;
-    int PCS_C_XmlSequencer;
-    int PCS_C_UserXmlLoaded;
-    int PCS_C_StartSequencer;
+    int PCS_C_SeqState[MAX_SLAVES];
+    int PCS_C_XmlSequencer[MAX_SLAVES];
+    int PCS_C_UserXmlLoaded[MAX_SLAVES];
+    int PCS_C_StartSequencer[MAX_SLAVES];
+
+    /* asyn parameters for the tuning */
+    std::vector<std::pair<std::string,int> > controlSetParams;
+
+
     char outString_[MAX_CONTROLLER_STRING_SIZE];
     char inString_[MAX_CONTROLLER_STRING_SIZE];
 

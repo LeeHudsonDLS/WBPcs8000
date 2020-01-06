@@ -15,12 +15,12 @@ public:
     XmlCommandConstructor(pcsController& crtl);
     void addInputParameter(const std::string& parameter, const std::string& csvCommand,int input);
     void addInputParameter(const std::string& parameter, const std::string& csvCommand);
-    std::string getInputXml(int axis, const std::string& parameter);
+    std::string getInputXml(int slave, const std::string& parameter);
 
     void addParameter(const std::string& parameter, const std::string& csvCommand);
-    std::string getXml(int axis, const std::string& parameter);
-    std::string getXml(int axis, const std::string& parameter, int val);
-    std::string getXml(int axis, const std::string& parameter, std::string val);
+    std::string getXml(int slave, const std::string& parameter);
+    std::string getXml(int slave, const std::string& parameter, int val);
+    std::string getXml(int slave, const std::string& parameter, std::string val);
     std::string dumpXml();
 
 private:

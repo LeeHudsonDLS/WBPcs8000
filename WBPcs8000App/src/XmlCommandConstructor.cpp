@@ -82,12 +82,13 @@ void XmlCommandConstructor::addInputParameter(const std::string &parameter, cons
 
 /**
  * Looks up the parameter in the inputMap Map container and returns the xml string
+ * @param slave Slave number to append to xml
  * @param parameter Key for the parameter
  * @return XML string for the parameter
  */
-std::string XmlCommandConstructor::getInputXml(int axis, const std::string &parameter) {
+std::string XmlCommandConstructor::getInputXml(int slave, const std::string &parameter) {
 
-    return appendSlave(axis-1,inputMap.find(parameter)->second);
+    return appendSlave(slave,inputMap.find(parameter)->second);
 }
 
 /**
@@ -103,26 +104,28 @@ void XmlCommandConstructor::addParameter(const std::string &parameter, const std
 
 /**
  * Looks up the parameter in the commandMap Map container and returns the xml string
+ * @param slave Slave number to append to xml
  * @param parameter Key for the parameter
  * @return XML string for the parameter
  */
-std::string XmlCommandConstructor::getXml(int axis,const std::string &parameter) {
+std::string XmlCommandConstructor::getXml(int slave,const std::string &parameter) {
 
     std::string commandString = commandMap.find(parameter)->second;
 
     //Remove ! character for commands with no value
     commandString.erase(std::remove(commandString.begin(),commandString.end(),'!'),commandString.end());
 
-    return appendSlave(axis-1,commandString);
+    return appendSlave(slave,commandString);
 }
 
 /**
  * Looks up the parameter in the commandMap Map container and returns the xml string
+ * @param slave Slave number to append to xml
  * @param parameter Key for the parameter
  * @param val Integer value to set the parameter to
  * @return XML string for the parameter
  */
-std::string XmlCommandConstructor::getXml(int axis, const std::string &parameter,int val) {
+std::string XmlCommandConstructor::getXml(int slave, const std::string &parameter,int val) {
 
     int pos;
     std::string commandString = commandMap.find(parameter)->second;
@@ -132,16 +135,17 @@ std::string XmlCommandConstructor::getXml(int axis, const std::string &parameter
     while ((pos = commandString.find("!")) != std::string::npos)
         commandString.replace(pos, 1, inputStringStream.str());
 
-    return appendSlave(axis-1,commandString);
+    return appendSlave(slave,commandString);
 }
 
 /**
  * Looks up the parameter in the commandMap Map container and returns the xml string
+ * @param slave Slave number to append to xml
  * @param parameter Key for the parameter
  * @param val String value to set the parameter to
  * @return XML string for the parameter
  */
-std::string XmlCommandConstructor::getXml(int axis, const std::string &parameter,std::string val) {
+std::string XmlCommandConstructor::getXml(int slave, const std::string &parameter,std::string val) {
 
     int pos;
     std::string commandString = commandMap.find(parameter)->second;
@@ -149,7 +153,7 @@ std::string XmlCommandConstructor::getXml(int axis, const std::string &parameter
     while ((pos = commandString.find("!")) != std::string::npos)
         commandString.replace(pos, 1, val);
 
-    return appendSlave(axis-1,commandString);
+    return appendSlave(slave,commandString);
 }
 
 

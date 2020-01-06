@@ -1,2 +1,152 @@
+
+#% macro, KP, PIDx controller, Kp.
+#% macro, TI, PIDx controller, Ti.
+#% macro, TD, PIDx controller, Td.
+#% macro, T1, PIDT controller, T1.
+#% macro, KE, PIDV contr, controllergain.
+#% macro, KE2, PIDV contr, quadratic gain.
+#% macro, KFF, PIDV contr, feedforward.
+#% macro, KREI, PIDV contr, residual error integrator.
+#% macro, TAU, PIDV contr, timeconstant for residual error integrator
+#% macro, ELIM, PIDV contr, Errorlimit for residual error integrator.
+#% macro, KDCC, PIDV contr, DC-correction.
+#% macro, SYM_MAN, PIDV contr, Manual bal- ancer.
+#% macro, SYM_ADP, PIDV contr, Adaptive bal- ancer.
+#% macro, GKI, PIDV contr, Kickergain.
+#% macro, TKI, PIDV contr, Timeconstant for kicker.
+#% macro, PK, PIDV contr,Peakcontroller.
+
 # include motor record from the motor module
 include "basic_asyn_motor.template"
+
+
+# Tuning parameters:
+
+#% autosave 1 VAL
+record(ao, "$(P)$(M):KP") {
+    field(PINI, "YES")
+    field(DTYP, "asynFloat64")
+	field(OUT,"@asyn($(PORT),$(ADDR))AXIS_KP")
+    field(VAL, "$(KP)")
+}
+
+#% autosave 1 VAL
+record(ao, "$(P)$(M):TI") {
+    field(PINI, "YES")
+    field(DTYP, "asynFloat64")
+	field(OUT,"@asyn($(PORT),$(ADDR))AXIS_TI")
+    field(VAL, "$(TI)")
+}
+
+#% autosave 1 VAL
+record(ao, "$(P)$(M):TD") {
+    field(PINI, "YES")
+    field(DTYP, "asynFloat64")
+	field(OUT,"@asyn($(PORT),$(ADDR))AXIS_TD")
+    field(VAL, "$(TD)")
+}
+
+#% autosave 1 VAL
+record(ao, "$(P)$(M):T1") {
+    field(PINI, "YES")
+    field(DTYP, "asynFloat64")
+	field(OUT,"@asyn($(PORT),$(ADDR))AXIS_T1")
+    field(VAL, "$(T1)")
+}
+
+#% autosave 1 VAL
+record(ao, "$(P)$(M):KE") {
+    field(PINI, "YES")
+    field(DTYP, "asynFloat64")
+	field(OUT,"@asyn($(PORT),$(ADDR))AXIS_KE")
+    field(VAL, "$(KE)")
+}
+
+#% autosave 1 VAL
+record(ao, "$(P)$(M):KE2") {
+    field(PINI, "YES")
+    field(DTYP, "asynFloat64")
+	field(OUT,"@asyn($(PORT),$(ADDR))AXIS_KE2")
+    field(VAL, "$(KE2)")
+}
+
+#% autosave 1 VAL
+record(ao, "$(P)$(M):KFF") {
+    field(PINI, "YES")
+    field(DTYP, "asynFloat64")
+	field(OUT,"@asyn($(PORT),$(ADDR))AXIS_KFF")
+    field(VAL, "$(KFF)")
+}
+
+#% autosave 1 VAL
+record(ao, "$(P)$(M):KREI") {
+    field(PINI, "YES")
+    field(DTYP, "asynFloat64")
+	field(OUT,"@asyn($(PORT),$(ADDR))AXIS_KREI")
+    field(VAL, "$(KREI)")
+}
+
+#% autosave 1 VAL
+record(ao, "$(P)$(M):TAU") {
+    field(PINI, "YES")
+    field(DTYP, "asynFloat64")
+	field(OUT,"@asyn($(PORT),$(ADDR))AXIS_TAU")
+    field(VAL, "$(TAU)")
+}
+
+
+#% autosave 1 VAL
+record(ao, "$(P)$(M):ELIM") {
+    field(PINI, "YES")
+    field(DTYP, "asynFloat64")
+	field(OUT,"@asyn($(PORT),$(ADDR))AXIS_ELIM")
+    field(VAL, "$(ELIM)")
+}
+
+#% autosave 1 VAL
+record(ao, "$(P)$(M):KDCC") {
+    field(PINI, "YES")
+    field(DTYP, "asynFloat64")
+	field(OUT,"@asyn($(PORT),$(ADDR))AXIS_KDCC")
+    field(VAL, "$(KDCC)")
+}
+
+#% autosave 1 VAL
+record(ao, "$(P)$(M):SYM_MAN") {
+    field(PINI, "YES")
+    field(DTYP, "asynFloat64")
+	field(OUT,"@asyn($(PORT),$(ADDR))AXIS_SYM_MAN")
+    field(VAL, "$(SYM_MAN)")
+}
+
+#% autosave 1 VAL
+record(ao, "$(P)$(M):SYM_ADP") {
+    field(PINI, "YES")
+    field(DTYP, "asynFloat64")
+	field(OUT,"@asyn($(PORT),$(ADDR))AXIS_SYM_ADP")
+    field(VAL, "$(SYM_ADP)")
+}
+
+#% autosave 1 VAL
+record(ao, "$(P)$(M):GKI") {
+    field(PINI, "YES")
+    field(DTYP, "asynFloat64")
+	field(OUT,"@asyn($(PORT),$(ADDR))AXIS_GKI")
+    field(VAL, "$(GKI)")
+}
+
+#% autosave 1 VAL
+record(ao, "$(P)$(M):TKI") {
+    field(PINI, "YES")
+    field(DTYP, "asynFloat64")
+	field(OUT,"@asyn($(PORT),$(ADDR))AXIS_TKI")
+    field(VAL, "$(TKI)")
+}
+
+#% autosave 1 VAL
+record(ao, "$(P)$(M):PK") {
+    field(PINI, "YES")
+    field(DTYP, "asynFloat64")
+	field(OUT,"@asyn($(PORT),$(ADDR))AXIS_PK")
+    field(VAL, "$(PK)")
+}

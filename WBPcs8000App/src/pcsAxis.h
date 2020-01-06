@@ -17,12 +17,13 @@
 #include <asynOctetSyncIO.h>
 #include "Sequencer.h"
 
+#define NO_OF_CONTROL_SET_PARAMS 16
 
 class pcsController;
 
 class pcsAxis : public asynMotorAxis{
     public:
-    pcsAxis(pcsController *ctrl, int axisNo);
+    pcsAxis(pcsController *ctrl, int axisNo, int slave);
     ~pcsAxis();
     void initialise(int axisNo);
 
@@ -36,6 +37,7 @@ class pcsAxis : public asynMotorAxis{
     asynStatus stop(double acceleration);
     asynStatus setPosition(double position);
     asynStatus poll(bool *moving);
+
 private:
     /* Data */
     pcsController *ctrl_;
@@ -44,6 +46,12 @@ private:
     double velocity_ ;
     double accel_;
     int scale_;
+    int slave_;
+
+    /* Vector storing the XPATH locations all the control_set parameters (Tuning) and their values taken from asynParams
+     * These values are written to in pcsController::writeFloat64() */
+    std::vector<std::pair<std::string,double> > controlSet_;
+
     friend class pcsController;
     asynStatus status;
 };

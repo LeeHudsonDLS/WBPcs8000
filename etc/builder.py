@@ -7,8 +7,6 @@ from iocbuilder.modules.calc import Calc
 from iocbuilder.modules.busy import Busy
 
 
-
-
 class pcsController(Device):
     """Defines the device configuration"""
 
@@ -20,11 +18,12 @@ class pcsController(Device):
 
 
     # Constructor, just store parameters
-    def __init__(self, PORT,  IP_ADDRESS, name = None, ASYN_ADDRESS=0, NUM_AXES=2, POLLMOVING=200,POLLNOTMOVING=200, **args):
+    def __init__(self, PORT,  IP_ADDRESS, NO_OF_SLAVES, name = None, ASYN_ADDRESS=0, NUM_AXES=2, POLLMOVING=200,POLLNOTMOVING=200, **args):
         self.ASYN_TCP_CONTROL = AsynIP('%s:51512' % IP_ADDRESS, '%s_CTRL' % PORT, noProcessEos=1)
         Device.__init__(self)
         self.PORT = PORT
         self.IP_ADDRESS = IP_ADDRESS
+        self.NO_OF_SLAVES = NO_OF_SLAVES
         self.name = name
         self.ASYN_ADDRESS = ASYN_ADDRESS
         self.NUM_AXES = NUM_AXES
@@ -45,6 +44,7 @@ class pcsController(Device):
     ArgInfo = makeArgInfo(__init__,
         PORT = Simple("Asyn port name", str),
         IP_ADDRESS = Simple("Asyn IP port name", str),
+        NO_OF_SLAVES = Choice("Number of slaves", range(1,9)),
         name = Simple("Controller name", str),
         ASYN_ADDRESS = Simple("Asyn IP port address", int),
         NUM_AXES = Simple("Number of axes", int),
@@ -57,6 +57,41 @@ class _sequencerControl(AutoSubstitution):
 class _dls_pcs_asyn_motor(AutoSubstitution,MotorRecord):
     TemplateFile = "dls_pcs_asyn_motor.db"
 
+class pcsSlave(Device):
+    """Defines the device configuration"""
+    WarnMacros = False
+    Dependencies = (Asyn, MotorLib,Busy, Calc)
+
+
+    # Constructor, just store parameters
+    def __init__(self, CONTROLLER, SLAVE_NO, P,ADDR=0,**args):
+        Device.__init__(self)
+        self.CONTROLLER = CONTROLLER
+        self.PORT = self.CONTROLLER.name
+        self.SLAVE_NO = SLAVE_NO
+        self.P = P
+        self.M = ":SLAVE"+str(SLAVE_NO)
+        self.ADDR = ADDR
+
+        if self.SLAVE_NO >= self.CONTROLLER.NO_OF_SLAVES:
+            print("SLAVE_NO too high")
+            self.SLAVE_NO = self.CONTROLLER.NO_OF_SLAVES -1
+        else:
+            print("SLAVE_NO Valid")
+
+        _sequencerControl(P=self.P,M=self.M,PORT=self.PORT,SLAVE_NO=self.SLAVE_NO,ADDR=self.ADDR)
+    # Once per instantiation
+    def Initialise(self):
+        print "# Slave"
+
+    # Arguments
+    ArgInfo = makeArgInfo(__init__,
+                          CONTROLLER = Ident("Controller name", pcsController),
+                          SLAVE_NO = Choice("Slave number", range(0,9)),
+                          P = Simple("Axis number", str),
+                          M = Simple("Axis number", str),
+                          ADDR = Simple("Axis number", int))
+
 
 class pcsAxis(Device):
     """Defines the device configuration"""
@@ -65,10 +100,13 @@ class pcsAxis(Device):
 
 
     # Constructor, just store parameters
-    def __init__(self, CONTROLLER, AXIS_NO,P,M,ADDR,DESC,VELO,PREC,EGU,TWV, **args):
+    def __init__(self, SLAVE,P,M,ADDR,DESC,VELO,PREC,EGU,TWV,KP=0.5,TI=0.05,TD=0,T1=0.000125,KE=60,KE2=0,KFF=1200,KREI=0,TAU=0,ELIM=0,KDCC=0,SYM_MAN=0,SYM_ADP=0,GKI=0,TKI=0,PK=1, **args):
         Device.__init__(self)
-        self.CONTROLLER = CONTROLLER
-        self.AXIS_NO = AXIS_NO
+        self.SLAVE = SLAVE
+        self.SLAVE_NO = SLAVE.SLAVE_NO
+        self.CONTROLLER = SLAVE.CONTROLLER
+        self.PORT = self.CONTROLLER.PORT
+        self.SLAVE = SLAVE
         self.P = P
         self.M = M
         self.ADDR = ADDR
@@ -77,18 +115,49 @@ class pcsAxis(Device):
         self.PREC = PREC
         self.EGU = EGU
         self.TWV = TWV
-        _dls_pcs_asyn_motor(P=self.P,M=self.M,PORT=self.CONTROLLER,ADDR=self.ADDR,DESC=self.DESC,MRES=0.001,VELO=self.VELO,PREC=self.PREC,EGU=self.EGU,TWV=self.TWV)
-        _sequencerControl(P=self.P,M=self.M,PORT=self.CONTROLLER,AXIS_NO=self.AXIS_NO)
+        self.KP = KP
+        self.TI = TI
+        self.TD = TD
+        self.T1 = T1
+        self.KE = KE
+        self.KE2 = KE2
+        self.KFF = KFF
+        self.KREI = KREI
+        self.TAU = TAU
+        self.ELIM = ELIM
+        self.KDCC = KDCC
+        self.SYM_MAN = SYM_MAN
+        self.SYM_ADP = SYM_ADP
+        self.GKI = GKI
+        self.TKI = TKI
+        self.PK = PK
+        _dls_pcs_asyn_motor(P=self.P,M=self.M,PORT=self.PORT,ADDR=self.ADDR,DESC=self.DESC,MRES=0.001,VELO=self.VELO,PREC=self.PREC,EGU=self.EGU,TWV=self.TWV,
+                            KP=self.KP,
+                            TI=self.TI,
+                            TD=self.TD,
+                            T1=self.T1,
+                            KE=self.KE,
+                            KE2=self.KE2,
+                            KFF=self.KFF,
+                            KREI=self.KREI,
+                            TAU=self.TAU,
+                            ELIM=self.ELIM,
+                            KDCC=self.KDCC,
+                            SYM_MAN=self.SYM_MAN,
+                            SYM_ADP=self.SYM_ADP,
+                            GKI=self.GKI,
+                            TKI=self.TKI,
+                            PK=self.PK)
+
     # Once per instantiation
     def Initialise(self):
         print "# Configure Walter and Bai PCS8000 Axis"
-        print "# pcsAxisConfig(%(CONTROLLER)s, %(AXIS_NO)d)"
-        print "pcsAxisConfig(%(CONTROLLER)s, %(AXIS_NO)d)" % self.__dict__
+        print "# pcsAxisConfig(%(CONTROLLER)s, %(ADDR)d)"
+        print "pcsAxisConfig(%(PORT)s, %(ADDR)d,%(SLAVE_NO)d)" % self.__dict__
 
     # Arguments
     ArgInfo = makeArgInfo(__init__,
-                          CONTROLLER = Simple("Controller name", str),
-                          AXIS_NO = Simple("Axis number", int),
+                          SLAVE = Ident("Slave number",pcsSlave),
                           P = Simple("Axis number", str),
                           M = Simple("Axis number", str),
                           ADDR = Simple("Axis number", int),
@@ -96,5 +165,21 @@ class pcsAxis(Device):
                           VELO = Simple("Axis number", float),
                           PREC = Simple("Axis number", int),
                           EGU = Simple("Axis number", str),
-                          TWV = Simple("Axis number", float))
+                          TWV = Simple("Axis number", float),
+                          KP = Simple("PIDx controller, Kp.", float),
+                          TI = Simple("PIDx controller, Ti.", float),
+                          TD = Simple("PIDx controller, Td.", float),
+                          T1 = Simple("PIDT controller, T1.", float),
+                          KE = Simple("PIDV contr, controllergain.", float),
+                          KE2 = Simple("PIDV contr, quadratic gain.", float),
+                          KFF = Simple("PIDV contr, feedforward.", float),
+                          KREI = Simple("PIDV contr, residual error integrator.", float),
+                          TAU = Simple("PIDV contr, timeconstant for residual error integrator", float),
+                          ELIM = Simple("PIDV contr, Errorlimit for residual error integrator.", float),
+                          KDCC = Simple("PIDV contr, DC-correction.", float),
+                          SYM_MAN = Simple("PIDV contr, Manual bal- ancer.", float),
+                          SYM_ADP = Simple("PIDV contr, Adaptive bal- ancer.", float),
+                          GKI = Simple("PIDV contr, Kickergain.", float),
+                          TKI = Simple("PIDV contr, Timeconstant for kicker.", float),
+                          PK = Simple("PIDV contr,Peakcontroller.", float))
 

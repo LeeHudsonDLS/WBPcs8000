@@ -2,11 +2,12 @@
 #% macro, P, Device Prefix
 #% macro, M, Device Suffix
 #% macro, PORT, Asyn Port name
-#% gui, $(PORT):$(AXIS_NO) , edmtab, seqControl.edl, P=$(P),M=$(M)
+#% macro, ADDR, Asyn address
+#% gui, $(PORT):$(SLAVE_NO) , edmtab, seqControl.edl, P=$(P),M=$(M)
 
 record(bi, "$(P)$(M):SequencerState_RBV") {
    field(DTYP, "asynInt32")
-   field(INP, "@asyn($(PORT),$(AXIS_NO))SEQ_STATE")
+   field(INP, "@asyn($(PORT),$(ADDR))SEQ_STATE$(SLAVE_NO)")
    field(ZNAM, "Idle")
    field(ONAM, "Running")
    field(VAL,  "0")
@@ -17,7 +18,7 @@ record(waveform, "$(P)$(M):SequencerXML")
 {
   field(DTYP, "asynOctetWrite")
   field(FTVL, "CHAR")
-  field(INP,  "@asyn($(PORT),$(AXIS_NO))XML_SEQ")
+  field(INP,  "@asyn($(PORT),$(ADDR))XML_SEQ$(SLAVE_NO)")
   field(NELM, "4096")
   field(SCAN, "Passive")
 }
@@ -26,14 +27,14 @@ record(waveform, "$(P)$(M):SequencerXML_RBV")
 {
   field(DTYP, "asynOctetRead")
   field(FTVL, "CHAR")
-  field(INP,  "@asyn($(PORT),$(AXIS_NO))XML_SEQ")
+  field(INP,  "@asyn($(PORT),$(ADDR))XML_SEQ$(SLAVE_NO)")
   field(NELM, "4096")
   field(SCAN, "I/O Intr")
 }
 
 record(bi, "$(P)$(M):UserXmlLoaded_RBV") {
    field(DTYP, "asynInt32")
-   field(INP, "@asyn($(PORT),$(AXIS_NO))USER_XML_LOADED")
+   field(INP, "@asyn($(PORT),$(ADDR))USER_XML_LOADED$(SLAVE_NO)")
    field(ZNAM, "Error")
    field(ONAM, "OK")
    field(VAL,  "0")
@@ -42,7 +43,7 @@ record(bi, "$(P)$(M):UserXmlLoaded_RBV") {
 
 record(bo, "$(P)$(M):Start") {
    field(DTYP, "asynInt32")
-   field(OUT, "@asyn($(PORT),$(AXIS_NO))SEQ_START")
+   field(OUT, "@asyn($(PORT),$(ADDR))SEQ_START$(SLAVE_NO)")
    field(ZNAM, "Done")
    field(ONAM, "Run")
    field(VAL,  "0")
@@ -52,7 +53,7 @@ record(bo, "$(P)$(M):Start") {
 
 record(bi, "$(P)$(M):Start_RBV") {
    field(DTYP, "asynInt32")
-   field(INP, "@asyn($(PORT),$(AXIS_NO))SEQ_START")
+   field(INP, "@asyn($(PORT),$(ADDR))SEQ_START$(SLAVE_NO)")
    field(ZNAM, "Done")
    field(ONAM, "Running")
    field(ZSV,  "NO_ALARM")

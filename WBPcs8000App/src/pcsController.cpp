@@ -50,6 +50,26 @@ pcsController::pcsController(const char *portName, int lowLevelPortAddress, int 
     pcsAxis* pAxis;
     asynStatus status;
     static const char *functionName = "pcsController::pcsController";
+
+    /* This order must be the same as pcsAxis::controlSet_ */
+    controlSetParams.push_back(std::pair<std::string,int>(PCS_A_kpParamString,0));
+    controlSetParams.push_back(std::pair<std::string,int>(PCS_A_tiParamString,0));
+    controlSetParams.push_back(std::pair<std::string,int>(PCS_A_tdParamString,0));
+    controlSetParams.push_back(std::pair<std::string,int>(PCS_A_t1ParamString,0));
+    controlSetParams.push_back(std::pair<std::string,int>(PCS_A_keParamString,0));
+    controlSetParams.push_back(std::pair<std::string,int>(PCS_A_ke2ParamString,0));
+    controlSetParams.push_back(std::pair<std::string,int>(PCS_A_kffParamString,0));
+    controlSetParams.push_back(std::pair<std::string,int>(PCS_A_kreiParamString,0));
+    controlSetParams.push_back(std::pair<std::string,int>(PCS_A_tauParamString,0));
+    controlSetParams.push_back(std::pair<std::string,int>(PCS_A_elimParamString,0));
+    controlSetParams.push_back(std::pair<std::string,int>(PCS_A_kdccParamString,0));
+    controlSetParams.push_back(std::pair<std::string,int>(PCS_A_symManParamString,0));
+    controlSetParams.push_back(std::pair<std::string,int>(PCS_A_symAdpParamString,0));
+    controlSetParams.push_back(std::pair<std::string,int>(PCS_A_gkiParamString,0));
+    controlSetParams.push_back(std::pair<std::string,int>(PCS_A_tkiParamString,0));
+    controlSetParams.push_back(std::pair<std::string,int>(PCS_A_pkParamString,0));
+
+
     createAsynParams();
 
     driverName = "pcsController";
@@ -131,16 +151,16 @@ pcsController::pcsController(const char *portName, int lowLevelPortAddress, int 
 
     //Configure UDP streams and generic parameters for all axes
     for(int i = 0; i < numAxes; i++) {
-        status = sendXmlCommand(i+1,CLEAR_UDP_CMD);
-        status = sendXmlCommand(i+1,REGISTER_STREAM_PARAM,"phys14");
+        status = sendXmlCommand(i,CLEAR_UDP_CMD);
+        status = sendXmlCommand(i,REGISTER_STREAM_PARAM,"phys14");
 
         // Enable motor
-        status = sendXmlCommand(i+1,SYS_STATE_PARAM,"Ready");
+        status = sendXmlCommand(i,SYS_STATE_PARAM,"Ready");
     }
 
     //Start UDP
     for(int i = 0; i < numAxes; i++) {
-        status = sendXmlCommand(i+1,START_UDP_CMD);
+        status = sendXmlCommand(i,START_UDP_CMD);
     }
 
     startPoller(movingPollPeriod, idlePollPeriod, 2);
@@ -164,12 +184,26 @@ asynStatus pcsController::poll() {
 void pcsController::createAsynParams(void){
     int index = 0;
     asynStatus status = asynSuccess;
+    char buffer[128];
     status = createParam(PCS_C_FirstParamString,asynParamInt32,&PCS_C_FirstParam);
-    status = createParam(PCS_C_SeqStateString,asynParamInt32,&PCS_C_SeqState);
-    status = createParam(PCS_C_XmlSequencerString,asynParamOctet,&PCS_C_XmlSequencer);
-    status = createParam(PCS_C_UserXmlLoadedString, asynParamInt32, &PCS_C_UserXmlLoaded);
-    status = createParam(PCS_C_StartSequencerString,asynParamInt32,&PCS_C_StartSequencer);
 
+    /* Iterate through all the controlSetParams and create the asynDoubleParams */
+    std::vector<std::pair<std::string,int> >::iterator it = controlSetParams.begin();
+    while(it != controlSetParams.end()){
+        status = createParam(it->first.c_str(),asynParamFloat64,&it->second);
+        it++;
+    }
+
+    for(int i = 0; i < MAX_SLAVES; i ++){
+        sprintf(buffer,"SEQ_STATE%d",i);
+        status = createParam(buffer,asynParamInt32,&PCS_C_SeqState[i]);
+        sprintf(buffer,"XML_SEQ%d",i);
+        status = createParam(buffer,asynParamOctet,&PCS_C_XmlSequencer[i]);
+        sprintf(buffer,"USER_XML_LOADED%d",i);
+        status = createParam(buffer, asynParamInt32, &PCS_C_UserXmlLoaded[i]);
+        sprintf(buffer,"SEQ_START%d",i);
+        status = createParam(buffer,asynParamInt32,&PCS_C_StartSequencer[i]);
+    }
 }
 
 pcsAxis* pcsController::getAxis(asynUser *pasynUser)
@@ -343,12 +377,12 @@ void pcsController::eventListener(pcsController::portData *pPvt) {
                 case SEQ_STATE_CHANGE_EVT:
                     if(PACKET.ev_value == 2) {
                         pAxis->setIntegerParam(motorStatusDone_, 1);
-                        pAxis->setIntegerParam(PCS_C_SeqState,0);
-                        pAxis->setIntegerParam(PCS_C_StartSequencer,0);
+                        setIntegerParam(PCS_C_SeqState[pAxis->slave_],0);
+                        setIntegerParam(PCS_C_StartSequencer[pAxis->slave_],0);
                     }
                     if(PACKET.ev_value == 3) {
                         pAxis->setIntegerParam(motorStatusDone_, 0);
-                        pAxis->setIntegerParam(PCS_C_SeqState,1);
+                        setIntegerParam(PCS_C_SeqState[pAxis->slave_],1);
                     }
                     break;
                 case PLIM_STATE_CHANGE_EVT:
@@ -429,19 +463,49 @@ asynStatus pcsController::writeInt32(asynUser *pasynUser, epicsInt32 value) {
     if(pasynUser->reason < PCS_C_FirstParam){
         asynMotorController::writeInt32(pasynUser,value);
     }
-    if(pasynUser->reason == PCS_C_StartSequencer){
-        pAxis->setIntegerParam(PCS_C_StartSequencer,value);
 
-        if(value)
-            sprintf(outString_, commandConstructor.getXml(pAxis->axisNo_, SEQ_CONTROL_PARAM, "Program").c_str());
-        else
-            sprintf(outString_, commandConstructor.getXml(pAxis->axisNo_, SEQ_CONTROL_PARAM, "Setup").c_str());
-        writeReadController();
-        if (Sequencer::containsAck(inString_)) {
-            /*Do something*/
+    for(int i = 0; i < MAX_SLAVES; i++){
+        if(pasynUser->reason == PCS_C_StartSequencer[i]){
+            setIntegerParam(PCS_C_StartSequencer[i],value);
+
+            if(value)
+                sprintf(outString_, commandConstructor.getXml(i, SEQ_CONTROL_PARAM, "Program").c_str());
+            else
+                sprintf(outString_, commandConstructor.getXml(i, SEQ_CONTROL_PARAM, "Setup").c_str());
+            writeReadController();
+            if (Sequencer::containsAck(inString_)) {
+                /*Do something*/
+            }
         }
+
     }
 
+}
+
+asynStatus pcsController::writeFloat64(asynUser *pasynUser, epicsFloat64 value) {
+    pcsAxis* pAxis;
+    pAxis = getAxis(pasynUser);
+    int controlSetIndex = 0;
+
+    if(pasynUser->reason < PCS_C_FirstParam){
+        return asynMotorController::writeFloat64(pasynUser,value);
+    }
+
+
+
+    /* Iterate through all the control set parameters and if this method has been called for one of these parameters
+     * update the parameter library and set the corresponding element in pcsAxis::controlSet_. This is why pcsAxis::controlSet_
+     * and pcsController::controlSetParams must be initialised with the parameters in the same order, there is no other way to
+     * tie them together. */
+    std::vector<std::pair<std::string,int> >::iterator controlSetParamsIterator = controlSetParams.begin();
+    while(controlSetParamsIterator!=controlSetParams.end()){
+        if(pasynUser->reason == controlSetParamsIterator->second){
+            pAxis->controlSet_[controlSetIndex].second=value;
+            return pAxis->setDoubleParam(pasynUser->reason,value);
+        }
+        controlSetIndex++;
+        controlSetParamsIterator++;
+    }
 }
 
 asynStatus pcsController::writeOctet(asynUser *pasynUser, const char *value, size_t nChars, size_t *nActual) {
@@ -450,12 +514,12 @@ asynStatus pcsController::writeOctet(asynUser *pasynUser, const char *value, siz
     pAxis = getAxis(pasynUser);
 
     /* User has sent a custom sequencer */
-    if(pasynUser->reason == PCS_C_XmlSequencer){
+    if(pasynUser->reason == PCS_C_XmlSequencer[0]){
         if(Sequencer::isStringXML(value)){
 
             /* Update the asyn parameter*/
             lock();
-            pAxis->setStringParam(PCS_C_XmlSequencer,value);
+            setStringParam(PCS_C_XmlSequencer[0],value);
             unlock();
 
             /* Send to controller */
@@ -465,17 +529,48 @@ asynStatus pcsController::writeOctet(asynUser *pasynUser, const char *value, siz
             /* Determine if the PCS8000 is happy with the sequencer */
             if(Sequencer::containsAck(inString_)){
                 lock();
-                pAxis->setIntegerParam(PCS_C_UserXmlLoaded, 1);
+                setIntegerParam(PCS_C_UserXmlLoaded[0], 1);
                 unlock();
             }else {
                 lock();
-                pAxis->setIntegerParam(PCS_C_UserXmlLoaded, 0);
+                setIntegerParam(PCS_C_UserXmlLoaded[0], 0);
                 unlock();
             }
 
         }else{
             lock();
-            pAxis->setIntegerParam(PCS_C_UserXmlLoaded, 0);
+            setIntegerParam(PCS_C_UserXmlLoaded[0], 0);
+            unlock();
+        }
+    }
+
+    /* User has sent a custom sequencer */
+    if(pasynUser->reason == PCS_C_XmlSequencer[1]){
+        if(Sequencer::isStringXML(value)){
+
+            /* Update the asyn parameter*/
+            lock();
+            setStringParam(PCS_C_XmlSequencer[1],value);
+            unlock();
+
+            /* Send to controller */
+            sprintf(outString_,value);
+            writeReadController();
+
+            /* Determine if the PCS8000 is happy with the sequencer */
+            if(Sequencer::containsAck(inString_)){
+                lock();
+                setIntegerParam(PCS_C_UserXmlLoaded[1], 1);
+                unlock();
+            }else {
+                lock();
+                setIntegerParam(PCS_C_UserXmlLoaded[1], 0);
+                unlock();
+            }
+
+        }else{
+            lock();
+            setIntegerParam(PCS_C_UserXmlLoaded[1], 0);
             unlock();
         }
     }
@@ -489,15 +584,15 @@ asynStatus pcsController::writeOctet(asynUser *pasynUser, const char *value, siz
 /*
  * Method to populate outString_ with an XML command and send to the controller.
  * Looks up the parameter in the commandConstructor member with the unique parameter key.
- * @param axisNo Axis number
+ * @param slave slave number
  * @param parameter Unique parameter key
  * @param value The value of the parameter
  */
 template <typename T>
-asynStatus pcsController::sendXmlCommand(int axisNo, const std::string &parameter, T value) {
+asynStatus pcsController::sendXmlCommand(int slave, const std::string &parameter, T value) {
 
     asynStatus status = asynSuccess;
-    sprintf(outString_, commandConstructor.getXml(axisNo, parameter,value).c_str());
+    sprintf(outString_, commandConstructor.getXml(slave, parameter,value).c_str());
     status = writeReadController();
     if (status != asynSuccess) {
         asynPrint(pasynUserSelf, ASYN_TRACE_ERROR,
@@ -511,13 +606,13 @@ asynStatus pcsController::sendXmlCommand(int axisNo, const std::string &paramete
  * Method to populate outString_ with an XML command and send to the controller.
  * Looks up the parameter in the commandConstructor member with the unique parameter key.
  * This variant is for a parameter with no value, eg, <udpxmit><slave>0</slave><clear></clear></udpxmit>
- * @param axisNo Axis number
+ * @param slave slave number
  * @param parameter Unique parameter key
  */
-asynStatus pcsController::sendXmlCommand(int axisNo, const std::string &parameter) {
+asynStatus pcsController::sendXmlCommand(int slave, const std::string &parameter) {
 
     asynStatus status = asynSuccess;
-    sprintf(outString_, commandConstructor.getXml(axisNo, parameter).c_str());
+    sprintf(outString_, commandConstructor.getXml(slave, parameter).c_str());
     status = writeReadController();
     if (status != asynSuccess) {
         asynPrint(pasynUserSelf, ASYN_TRACE_ERROR,

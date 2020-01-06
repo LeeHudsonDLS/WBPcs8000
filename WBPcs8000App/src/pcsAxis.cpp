@@ -8,9 +8,10 @@
 
 #include <epicsExport.h>
 
-pcsAxis::pcsAxis(pcsController *ctrl, int axisNo)
+pcsAxis::pcsAxis(pcsController *ctrl, int axisNo, int slave)
         :asynMotorAxis((asynMotorController *) ctrl, axisNo),
         ctrl_(ctrl),
+        slave_(slave),
         relativeMoveSequencer(relativeMoveTemplate),
         absoluteMoveSequencer(absoluteMoveTemplate){
 
@@ -24,8 +25,8 @@ pcsAxis::pcsAxis(pcsController *ctrl, int axisNo)
     velocity_ = 0.0;
     accel_ = 0.0;
     initialise(axisNo_);
-    relativeMoveSequencer.setElement("//slave",axisNo-1);
-    absoluteMoveSequencer.setElement("//slave",axisNo-1);
+    relativeMoveSequencer.setElement("//slave",slave_);
+    absoluteMoveSequencer.setElement("//slave",slave_);
     setIntegerParam(ctrl_->motorStatusMoving_, false);
     setIntegerParam(ctrl_->motorStatusDone_,1);
     callParamCallbacks();
@@ -38,6 +39,24 @@ void pcsAxis::initialise(int axisNo) {
     printf("Axis %d created \n",axisNo);
 
 
+    /* Populate the controlSet_ vector with all the XPATH locations of the XML elements they will be writing to
+     * These need to be in the same order as pcsController::controlSetParams */
+    controlSet_.push_back(std::pair<std::string,int>("//kp",0));
+    controlSet_.push_back(std::pair<std::string,int>("//ti",0));
+    controlSet_.push_back(std::pair<std::string,int>("//td",0));
+    controlSet_.push_back(std::pair<std::string,int>("//t1",0));
+    controlSet_.push_back(std::pair<std::string,int>("//ke",0));
+    controlSet_.push_back(std::pair<std::string,int>("//ke2",0));
+    controlSet_.push_back(std::pair<std::string,int>("//kff",0));
+    controlSet_.push_back(std::pair<std::string,int>("//krei",0));
+    controlSet_.push_back(std::pair<std::string,int>("//tau",0));
+    controlSet_.push_back(std::pair<std::string,int>("//elim",0));
+    controlSet_.push_back(std::pair<std::string,int>("//kdcc",0));
+    controlSet_.push_back(std::pair<std::string,int>("//sym_man",0));
+    controlSet_.push_back(std::pair<std::string,int>("//sym_adp",0));
+    controlSet_.push_back(std::pair<std::string,int>("//gki",0));
+    controlSet_.push_back(std::pair<std::string,int>("//tki",0));
+    controlSet_.push_back(std::pair<std::string,int>("//pk",0));
 
     // Send the xml
     //sprintf(ctrl_->outString_, "%s",udpSetup.getXml().c_str());
@@ -57,7 +76,17 @@ asynStatus pcsAxis::move(double position, int relative, double minVelocity, doub
     printf("pcsAxis::move(%f) called\n",position);
     rxBuffer[0]='\0';
     ctrl_->inString_[0]='\0';
+    printf("kp = %f\n",controlSet_[0].second);
 
+    /*
+     * Set PID parameters from asyn parameters
+     */
+
+    std::vector<std::pair<std::string,double> >::iterator pidIterator = controlSet_.begin();
+    while(pidIterator!=controlSet_.end()){
+        absoluteMoveSequencer.setElement(pidIterator->first.c_str(),pidIterator->second);
+        pidIterator++;
+    }
 
 
     /*
@@ -109,7 +138,7 @@ asynStatus pcsAxis::move(double position, int relative, double minVelocity, doub
 
     // Get the completed sequncer in XML form
     sprintf(seqBuffer,absoluteMoveSequencer.getXml().c_str());
-    status = pasynOctetSyncIO->writeRead(ctrl_->pasynUserController_,ctrl_->commandConstructor.getXml(axisNo_,SEQ_CONTROL_PARAM,"Setup").c_str(),strlen(ctrl_->commandConstructor.getXml(axisNo_,SEQ_CONTROL_PARAM,"Setup").c_str()),rxBuffer,1024,0.1,&nwrite,&nread,&eomReason);
+    status = pasynOctetSyncIO->writeRead(ctrl_->pasynUserController_,ctrl_->commandConstructor.getXml(slave_,SEQ_CONTROL_PARAM,"Setup").c_str(),strlen(ctrl_->commandConstructor.getXml(slave_,SEQ_CONTROL_PARAM,"Setup").c_str()),rxBuffer,1024,0.1,&nwrite,&nread,&eomReason);
 
     // Send the sequencer to the controller
     sprintf(ctrl_->outString_,seqBuffer);
@@ -117,12 +146,13 @@ asynStatus pcsAxis::move(double position, int relative, double minVelocity, doub
 
     /* Update asyn param to allow what's sequencer is loaded to be visible */
     ctrl_->lock();
-    setStringParam(ctrl_->PCS_C_XmlSequencer,seqBuffer);
-    setIntegerParam(ctrl_->PCS_C_UserXmlLoaded, 0);
+    ctrl_->setStringParam(ctrl_->PCS_C_XmlSequencer[slave_],seqBuffer);
+    ctrl_->setIntegerParam(ctrl_->PCS_C_UserXmlLoaded[slave_], 0);
     ctrl_->unlock();
+    ctrl_->callParamCallbacks();
 
     // Send the command to start the sequencer
-    sprintf(ctrl_->outString_,ctrl_->commandConstructor.getXml(axisNo_,SEQ_CONTROL_PARAM,"Program").c_str());
+    sprintf(ctrl_->outString_,ctrl_->commandConstructor.getXml(slave_,SEQ_CONTROL_PARAM,"Program").c_str());
     status = ctrl_->writeReadController();
 
 
@@ -149,7 +179,7 @@ asynStatus pcsAxis::stop(double acceleration){
     rxBuffer[0]='\0';
     printf ("Stop called \n");
     // Put sequencer into "Setup" state to stop it and any associated movement.
-    status = pasynOctetSyncIO->writeRead(ctrl_->pasynUserController_,ctrl_->commandConstructor.getXml(axisNo_,SEQ_CONTROL_PARAM,"Setup").c_str(),strlen(ctrl_->commandConstructor.getXml(axisNo_,SEQ_CONTROL_PARAM,"Setup").c_str()),rxBuffer,1024,0.1,&nwrite,&nread,&eomReason);
+    status = pasynOctetSyncIO->writeRead(ctrl_->pasynUserController_,ctrl_->commandConstructor.getXml(slave_,SEQ_CONTROL_PARAM,"Setup").c_str(),strlen(ctrl_->commandConstructor.getXml(slave_,SEQ_CONTROL_PARAM,"Setup").c_str()),rxBuffer,1024,0.1,&nwrite,&nread,&eomReason);
 
     return asynSuccess;
 }
@@ -191,7 +221,7 @@ pcsAxis::~pcsAxis(){
   * \param[in] axisNum The number of the axis, zero based.
   * \param[in] homeMode The homing mode of the axis
   */
-extern "C" int pcsAxisConfig(const char *controllerName, int axisNum)
+extern "C" int pcsAxisConfig(const char *controllerName, int axisNum, int slave)
 {
     int result = asynSuccess;
     pcsController* controller = (pcsController*)findAsynPortDriver(controllerName);
@@ -202,7 +232,7 @@ extern "C" int pcsAxisConfig(const char *controllerName, int axisNum)
     }
     else
     {
-        new pcsAxis(controller, axisNum);
+        new pcsAxis(controller, axisNum,slave);
     }
     return result;
 }
@@ -216,16 +246,18 @@ extern "C" int pcsAxisConfig(const char *controllerName, int axisNum)
 
 static const iocshArg pcsAxisConfigArg0 = {"Controller port name", iocshArgString};
 static const iocshArg pcsAxisConfigArg1 = {"Axis number", iocshArgInt};
+static const iocshArg pcsAxisConfigArg2 = {"Slave number", iocshArgInt};
 
 static const iocshArg *const pcsAxisConfigArgs[] = {&pcsAxisConfigArg0,
-                                                    &pcsAxisConfigArg1};
+                                                    &pcsAxisConfigArg1,
+                                                    &pcsAxisConfigArg2};
 
 static const iocshFuncDef configPcsAxis =
-        {"pcsAxisConfig", 2, pcsAxisConfigArgs};
+        {"pcsAxisConfig", 3, pcsAxisConfigArgs};
 
 static void configPcsAxisCallFunc(const iocshArgBuf *args)
 {
-    pcsAxisConfig(args[0].sval, args[1].ival);
+    pcsAxisConfig(args[0].sval, args[1].ival, args[2].ival);
 }
 
 static void PcsAxisRegister(void)
