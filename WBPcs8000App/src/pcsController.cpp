@@ -186,6 +186,8 @@ void pcsController::createAsynParams(void){
     asynStatus status = asynSuccess;
     char buffer[128];
     status = createParam(PCS_C_FirstParamString,asynParamInt32,&PCS_C_FirstParam);
+    status = createParam(PCS_A_priFeedbackParamString, asynParamFloat64, &PCS_A_priFeedbackParam);
+    status = createParam(PCS_A_secFeedbackParamString, asynParamFloat64, &PCS_A_secFeedbackParam);
 
     /* Iterate through all the controlSetParams and create the asynDoubleParams */
     std::vector<std::pair<std::string,int> >::iterator it = controlSetParams.begin();
@@ -491,7 +493,15 @@ asynStatus pcsController::writeFloat64(asynUser *pasynUser, epicsFloat64 value) 
         return asynMotorController::writeFloat64(pasynUser,value);
     }
 
+    if(pasynUser->reason == PCS_A_priFeedbackParam){
+        pAxis->primaryFeedbackStream = (int)value;
+        return pAxis->setDoubleParam(pasynUser->reason,value);
+    }
 
+    if(pasynUser->reason == PCS_A_secFeedbackParam){
+        pAxis->secondaryFeedbackStream = (int)value;
+        return pAxis->setDoubleParam(pasynUser->reason,value);
+    }
 
     /* Iterate through all the control set parameters and if this method has been called for one of these parameters
      * update the parameter library and set the corresponding element in pcsAxis::controlSet_. This is why pcsAxis::controlSet_

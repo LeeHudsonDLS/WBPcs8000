@@ -100,7 +100,7 @@ class pcsAxis(Device):
 
 
     # Constructor, just store parameters
-    def __init__(self, SLAVE,P,M,ADDR,DESC,VELO,PREC,EGU,TWV,KP=0.5,TI=0.05,TD=0,T1=0.000125,KE=60,KE2=0,KFF=1200,KREI=0,TAU=0,ELIM=0,KDCC=0,SYM_MAN=0,SYM_ADP=0,GKI=0,TKI=0,PK=1, **args):
+    def __init__(self, SLAVE,P,M,ADDR,DESC,VELO,PREC,EGU,TWV,FEEDBACK=14,FEEDBACK2=15,KP=0.5,TI=0.05,TD=0,T1=0.000125,KE=60,KE2=0,KFF=1200,KREI=0,TAU=0,ELIM=0,KDCC=0,SYM_MAN=0,SYM_ADP=0,GKI=0,TKI=0,PK=1, **args):
         Device.__init__(self)
         self.SLAVE = SLAVE
         self.SLAVE_NO = SLAVE.SLAVE_NO
@@ -115,6 +115,8 @@ class pcsAxis(Device):
         self.PREC = PREC
         self.EGU = EGU
         self.TWV = TWV
+        self.FEEDBACK = FEEDBACK
+        self.FEEDBACK2 = FEEDBACK2
         self.KP = KP
         self.TI = TI
         self.TD = TD
@@ -132,6 +134,8 @@ class pcsAxis(Device):
         self.TKI = TKI
         self.PK = PK
         _dls_pcs_asyn_motor(P=self.P,M=self.M,PORT=self.PORT,ADDR=self.ADDR,DESC=self.DESC,MRES=0.001,VELO=self.VELO,PREC=self.PREC,EGU=self.EGU,TWV=self.TWV,
+                            FEEDBACK = self.FEEDBACK,
+                            FEEDBACK2 = self.FEEDBACK2,
                             KP=self.KP,
                             TI=self.TI,
                             TD=self.TD,
@@ -166,6 +170,8 @@ class pcsAxis(Device):
                           PREC = Simple("Axis number", int),
                           EGU = Simple("Axis number", str),
                           TWV = Simple("Axis number", float),
+                          FEEDBACK = Choice("Phys stream for primary feedback", range(1,16)),
+                          FEEDBACK2 = Choice("Phys stream for secondary feedback", range(1,16)),
                           KP = Simple("PIDx controller, Kp.", float),
                           TI = Simple("PIDx controller, Ti.", float),
                           TD = Simple("PIDx controller, Td.", float),

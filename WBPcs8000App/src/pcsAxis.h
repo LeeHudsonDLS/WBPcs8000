@@ -47,6 +47,7 @@ private:
     double accel_;
     int scale_;
     int slave_;
+    int primaryFeedbackStream, secondaryFeedbackStream;
 
     /* Vector storing the XPATH locations all the control_set parameters (Tuning) and their values taken from asynParams
      * These values are written to in pcsController::writeFloat64() */

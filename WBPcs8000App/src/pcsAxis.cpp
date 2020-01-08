@@ -13,7 +13,9 @@ pcsAxis::pcsAxis(pcsController *ctrl, int axisNo, int slave)
         ctrl_(ctrl),
         slave_(slave),
         relativeMoveSequencer(relativeMoveTemplate),
-        absoluteMoveSequencer(absoluteMoveTemplate){
+        absoluteMoveSequencer(absoluteMoveTemplate),
+        primaryFeedbackStream(0),
+        secondaryFeedbackStream(0){
 
     // Look into MSTA bits for enabling motors
     static const char *functionName = "pcsAxis::pcsAxis";
@@ -72,11 +74,18 @@ asynStatus pcsAxis::move(double position, int relative, double minVelocity, doub
     static const char *functionName = "move";
     char seqBuffer[4096];
     char rxBuffer[1024];
+    char primaryFeedbackString[10],secondaryFeedbackString[10];
     double decelTime,decelDist,midPosition;
     printf("pcsAxis::move(%f) called\n",position);
     rxBuffer[0]='\0';
     ctrl_->inString_[0]='\0';
-    printf("kp = %f\n",controlSet_[0].second);
+
+
+    sprintf(primaryFeedbackString,"phys%d",primaryFeedbackStream);
+    absoluteMoveSequencer.setElement("//stream",primaryFeedbackString);
+
+    sprintf(secondaryFeedbackString,"phys%d",secondaryFeedbackStream);
+    absoluteMoveSequencer.setElement("//stream2",secondaryFeedbackString);
 
     /*
      * Set PID parameters from asyn parameters

@@ -37,8 +37,10 @@
 #define PCS_A_gkiParamString        "AXIS_GKI"
 #define PCS_A_tkiParamString        "AXIS_TKI"
 #define PCS_A_pkParamString         "AXIS_PK"
+#define PCS_A_priFeedbackParamString   "AXIS_FEEDBACK"
+#define PCS_A_secFeedbackParamString   "AXIS_FEEDBACK2"
 
-#define NUM_OF_PCS_PARAMS   17+(MAX_SLAVES*4)
+#define NUM_OF_PCS_PARAMS   18+(MAX_SLAVES*4)
 
 // Items used for initial handshaking
 #define NAME "DLS"
@@ -161,6 +163,8 @@ public:
 protected:
     /* Asyn parameters */
     int PCS_C_FirstParam;
+    int PCS_A_priFeedbackParam;
+    int PCS_A_secFeedbackParam;
     int PCS_C_SeqState[MAX_SLAVES];
     int PCS_C_XmlSequencer[MAX_SLAVES];
     int PCS_C_UserXmlLoaded[MAX_SLAVES];
