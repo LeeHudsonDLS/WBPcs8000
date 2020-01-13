@@ -20,6 +20,7 @@
 #undef MAX_CONTROLLER_STRING_SIZE
 #define MAX_CONTROLLER_STRING_SIZE 2048
 #define MAX_SLAVES 8
+#define MAX_AXES_PER_SLAVE 8
 #define PCS_C_FirstParamString      "PCS_C_FIRSTPARAM"
 #define PCS_A_kpParamString         "AXIS_KP"
 #define PCS_A_tiParamString         "AXIS_TI"
@@ -142,6 +143,7 @@ public:
     static void tcpClientConnectedCallback(void *drvPvt, asynUser *pasynUser, char *portName,
                                            size_t len, int eomReason);
     void eventListener(portData *pPvt);
+    void registerAxisToSlave(int slave, int axis);
     void registerFeedback(int slave, int feedback, int axisNo);
 
     char* lowLevelPortName;
@@ -171,6 +173,12 @@ protected:
     /* asyn parameters for the tuning */
     std::vector<std::pair<std::string,int> > controlSetParams;
 
+
+    /* Array containing the number of axes per slave. The index is the slave number*/
+    int axesPerSlave[MAX_SLAVES];
+
+    /* Array containing which axis belongs to which slave */
+    int axisNumbers[MAX_SLAVES][MAX_AXES_PER_SLAVE];
 
     char outString_[MAX_CONTROLLER_STRING_SIZE];
     char inString_[MAX_CONTROLLER_STRING_SIZE];

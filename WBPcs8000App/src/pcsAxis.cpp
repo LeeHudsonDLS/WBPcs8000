@@ -80,6 +80,8 @@ void pcsAxis::initialise(int axisNo) {
         ctrl_->registerFeedback(slave_,primaryFeedback+67,axisNo);
     }
 
+    ctrl_->registerAxisToSlave(slave_,axisNo);
+
 }
 
 asynStatus pcsAxis::move(double position, int relative, double minVelocity, double maxVelocity, double acceleration){

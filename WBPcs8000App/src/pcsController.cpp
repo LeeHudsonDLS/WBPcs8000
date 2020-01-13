@@ -343,6 +343,8 @@ void pcsController::eventListener(pcsController::portData *pPvt) {
      */
     while(axesInitialised < numAxes_-1){
     }
+
+
     while(1) {
         packetIndex = 0;
         pasynOctetSyncIO->flush(pasynUser);
@@ -363,35 +365,48 @@ void pcsController::eventListener(pcsController::portData *pPvt) {
             printf("nread:%d\n",nread);
             printf("Server %u,%u,%llu,%u,%u\n",PACKET.ev_code,PACKET.slave,PACKET.ts,PACKET.ev_value,PACKET.num_data);
 
-            lock();
-            pAxis = getAxis(PACKET.slave + 1);
 
-            switch(PACKET.ev_code){
-                case SEQ_STATE_CHANGE_EVT:
-                    if(PACKET.ev_value == 2) {
-                        pAxis->setIntegerParam(motorStatusDone_, 1);
-                        setIntegerParam(PCS_C_SeqState[pAxis->slave_],0);
-                        setIntegerParam(PCS_C_StartSequencer[pAxis->slave_],0);
-                    }
-                    if(PACKET.ev_value == 3) {
-                        pAxis->setIntegerParam(motorStatusDone_, 0);
-                        setIntegerParam(PCS_C_SeqState[pAxis->slave_],1);
-                    }
-                    break;
-                case PLIM_STATE_CHANGE_EVT:
-                    pAxis->setDoubleParam(motorHighLimit_,PACKET.ev_value^1);
-                    printf("Setting PLIM to %d\n",PACKET.ev_value^1);
-                    break;
-                case NLIM_STATE_CHANGE_EVT:
-                    pAxis->setDoubleParam(motorLowLimit_,PACKET.ev_value^1);
-                    printf("Setting NLIM to %d\n",PACKET.ev_value^1);
-                    break;
-                default:
-                    break;
+
+            /* For every axis on this slave */
+            for(int i=0; i < axesPerSlave[PACKET.slave]; i++) {
+                pAxis = getAxis(axisNumbers[PACKET.slave][i]);
+
+
+                switch (PACKET.ev_code) {
+                    case SEQ_STATE_CHANGE_EVT:
+                        if (PACKET.ev_value == 2) {
+                            lock();
+                            pAxis->setIntegerParam(motorStatusDone_, 1);
+                            setIntegerParam(PCS_C_SeqState[pAxis->slave_], 0);
+                            setIntegerParam(PCS_C_StartSequencer[pAxis->slave_], 0);
+                            unlock();
+                        }
+                        if (PACKET.ev_value == 3) {
+                            lock();
+                            pAxis->setIntegerParam(motorStatusDone_, 0);
+                            setIntegerParam(PCS_C_SeqState[pAxis->slave_], 1);
+                            unlock();
+                        }
+                        break;
+                    case PLIM_STATE_CHANGE_EVT:
+                        lock();
+                        pAxis->setDoubleParam(motorHighLimit_, PACKET.ev_value ^ 1);
+                        unlock();
+                        printf("Setting PLIM to %d\n", PACKET.ev_value ^ 1);
+                        break;
+                    case NLIM_STATE_CHANGE_EVT:
+                        lock();
+                        pAxis->setDoubleParam(motorLowLimit_, PACKET.ev_value ^ 1);
+                        unlock();
+                        printf("Setting NLIM to %d\n", PACKET.ev_value ^ 1);
+                        break;
+                    default:
+                        break;
+                }
             }
 
 
-            unlock();
+
         }
     }
 }
@@ -723,6 +738,11 @@ void pcsController::registerFeedback(int slave, int feedback, int axisNo) {
 
     feedbackMap[slave].insert(std::pair<int,int>(feedback,axisNo));
 
+}
+
+void pcsController::registerAxisToSlave(int slave, int axis) {
+    axisNumbers[slave][axesPerSlave[slave]]=axis;
+    axesPerSlave[slave]++;
 }
 
 
