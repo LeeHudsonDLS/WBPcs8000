@@ -41,7 +41,6 @@ class pcsAxis : public asynMotorAxis{
 private:
     /* Data */
     pcsController *ctrl_;
-    Sequencer relativeMoveSequencer;
     Sequencer absoluteMoveSequencer;
     double velocity_ ;
     double accel_;

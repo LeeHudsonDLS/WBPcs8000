@@ -12,8 +12,7 @@ pcsAxis::pcsAxis(pcsController *ctrl, int axisNo, int slave, const char* priFeed
         :asynMotorAxis((asynMotorController *) ctrl, axisNo),
         ctrl_(ctrl),
         slave_(slave),
-        relativeMoveSequencer(relativeMoveTemplate),
-        absoluteMoveSequencer(absoluteMoveTemplate){
+        absoluteMoveSequencer(){
 
     // Look into MSTA bits for enabling motors
     static const char *functionName = "pcsAxis::pcsAxis";
@@ -29,7 +28,6 @@ pcsAxis::pcsAxis(pcsController *ctrl, int axisNo, int slave, const char* priFeed
     sprintf(secondaryFeedbackString,"%s",secFeedback);
 
     initialise(axisNo_);
-    relativeMoveSequencer.setElement("//slave",slave_);
     absoluteMoveSequencer.setElement("//slave",slave_);
     setIntegerParam(ctrl_->motorStatusMoving_, false);
     setIntegerParam(ctrl_->motorStatusDone_,1);
@@ -81,6 +79,11 @@ void pcsAxis::initialise(int axisNo) {
     }
 
     ctrl_->registerAxisToSlave(slave_,axisNo);
+
+    if(primaryFeedback == 14)
+        absoluteMoveSequencer.loadXML(absoluteMoveTemplate);
+    else
+        absoluteMoveSequencer.loadXML(moveWaitTemplate);
 
 }
 

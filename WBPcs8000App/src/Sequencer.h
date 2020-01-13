@@ -12,7 +12,7 @@
 
 class Sequencer {
 public:
-    Sequencer(const std::string& xmlTemplateFile);
+    int loadXML(const std::string& xmlTemplateFile);
     int setElement(const std::string& xPath, const std::string& value);
     int setElement(const std::string& xPath, const int& value);
     int setElement(const std::string& xPath, const double& value);

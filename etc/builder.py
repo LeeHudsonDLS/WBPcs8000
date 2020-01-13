@@ -155,7 +155,7 @@ class pcsAxis(Device):
     def Initialise(self):
         print "# Configure Walter and Bai PCS8000 Axis"
         print "# pcsAxisConfig(%(CONTROLLER)s, %(ADDR)d)"
-        print "pcsAxisConfig(%(PORT)s, %(ADDR)d,%(SLAVE_NO)d, %(FEEDBACK1)s,%(FEEDBACK2)s,)" % self.__dict__
+        print "pcsAxisConfig(%(PORT)s, %(ADDR)d,%(SLAVE_NO)d, %(FEEDBACK1)s,%(FEEDBACK2)s)" % self.__dict__
 
     # Arguments
     ArgInfo = makeArgInfo(__init__,

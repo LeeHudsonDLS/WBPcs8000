@@ -4,7 +4,8 @@
 
 #include "Sequencer.h"
 
-Sequencer::Sequencer(const std::string& xmlTemplateFile) {
+
+int Sequencer::loadXML(const std::string &xmlTemplateFile) {
 
     pDoc = xmlParseMemory(xmlTemplateFile.c_str(),xmlTemplateFile.size());
     if (pDoc == NULL ) {
