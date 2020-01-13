@@ -32,7 +32,7 @@ static void eventListenerC(pcsController::portData *data)
 }
 
 
-pcsController::pcsController(const char *portName, int lowLevelPortAddress, int numAxes,
+pcsController::pcsController(const char *portName, int lowLevelPortAddress, int numSlaves, int numAxes,
                               double movingPollPeriod, double idlePollPeriod)
     : asynMotorController(portName, numAxes + 1, NUM_MOTOR_DRIVER_PARAMS + NUM_OF_PCS_PARAMS,
                           0,
@@ -44,7 +44,8 @@ pcsController::pcsController(const char *portName, int lowLevelPortAddress, int 
                           commandConstructor(*this),
                           scale(AXIS_SCALE_FACTOR),
                           clientsConnected(0),
-                          axesInitialised(0)
+                          axesInitialised(0),
+                          numSlaves_(numSlaves)
 {
 
     pcsAxis* pAxis;
@@ -148,21 +149,6 @@ pcsController::pcsController(const char *portName, int lowLevelPortAddress, int 
                   "%s: error configuring udp stream port\n",functionName);
     }
 
-
-    //Configure UDP streams and generic parameters for all axes
-    for(int i = 0; i < numAxes; i++) {
-        status = sendXmlCommand(i,CLEAR_UDP_CMD);
-        status = sendXmlCommand(i,REGISTER_STREAM_PARAM,"phys14");
-
-        // Enable motor
-        status = sendXmlCommand(i,SYS_STATE_PARAM,"Ready");
-    }
-
-    //Start UDP
-    for(int i = 0; i < numAxes; i++) {
-        status = sendXmlCommand(i,START_UDP_CMD);
-    }
-
     startPoller(movingPollPeriod, idlePollPeriod, 2);
 
     // Start thread for UDP streams
@@ -170,6 +156,8 @@ pcsController::pcsController(const char *portName, int lowLevelPortAddress, int 
                       epicsThreadPriorityMedium,
                       epicsThreadGetStackSize(epicsThreadStackMedium),
                       udpReadTaskC, this);
+
+
     return;
 }
 
@@ -186,8 +174,6 @@ void pcsController::createAsynParams(void){
     asynStatus status = asynSuccess;
     char buffer[128];
     status = createParam(PCS_C_FirstParamString,asynParamInt32,&PCS_C_FirstParam);
-    status = createParam(PCS_A_priFeedbackParamString, asynParamFloat64, &PCS_A_priFeedbackParam);
-    status = createParam(PCS_A_secFeedbackParamString, asynParamFloat64, &PCS_A_secFeedbackParam);
 
     /* Iterate through all the controlSetParams and create the asynDoubleParams */
     std::vector<std::pair<std::string,int> >::iterator it = controlSetParams.begin();
@@ -422,9 +408,31 @@ void pcsController::udpReadTask() {
     int scale;
     pcsAxis* pAxis;
 
+    while(axesInitialised < numAxes_-1){
+    }
+
+    /* Clear UDP streams for all slaves */
+    for(int i = 0; i < numSlaves_; i++){
+        status = sendXmlCommand(i,CLEAR_UDP_CMD);
+    }
+
+    //Configure UDP streams and generic parameters for all axes
+    for(int i = 0; i < numAxes_-1; i++) {
+        pAxis = getAxis(i+1);
+        status = sendXmlCommand(pAxis->slave_,REGISTER_STREAM_PARAM,"phys14");
+
+        // Enable motor
+        status = sendXmlCommand(i,SYS_STATE_PARAM,"Ready");
+    }
+
+    //Start UDP
+    for(int i = 0; i < numAxes_-1; i++) {
+        status = sendXmlCommand(i,START_UDP_CMD);
+        printf("Starting UDP\n\n");
+    }
+
     while(1){
         packetIndex = 0;
-
         //Read UDP Packet
         status = pStreamPvt->pasynOctet->read(pStreamPvt->octetPvt,pStreamPvt->pasynUser,rxBuffer,UDP_PACKET_SIZE,&nBytesIn,&eomReason);
 
@@ -491,16 +499,6 @@ asynStatus pcsController::writeFloat64(asynUser *pasynUser, epicsFloat64 value) 
 
     if(pasynUser->reason < PCS_C_FirstParam){
         return asynMotorController::writeFloat64(pasynUser,value);
-    }
-
-    if(pasynUser->reason == PCS_A_priFeedbackParam){
-        pAxis->primaryFeedbackStream = (int)value;
-        return pAxis->setDoubleParam(pasynUser->reason,value);
-    }
-
-    if(pasynUser->reason == PCS_A_secFeedbackParam){
-        pAxis->secondaryFeedbackStream = (int)value;
-        return pAxis->setDoubleParam(pasynUser->reason,value);
     }
 
     /* Iterate through all the control set parameters and if this method has been called for one of these parameters
@@ -715,7 +713,7 @@ asynStatus pcsController::writeReadController() {
   * \param[in] serialPortAddress The address of the serial port (usually 0).
   */
 extern "C" int pcsControllerConfig(const char *portName, int lowLevelPortAddress,
-                                   int numAxes, int movingPollPeriod, int idlePollPeriod)
+                                   int numSlaves,int numAxes, int movingPollPeriod, int idlePollPeriod)
 {
     int result = asynSuccess;
     pcsController* existing = (pcsController*)findAsynPortDriver(portName);
@@ -727,7 +725,7 @@ extern "C" int pcsControllerConfig(const char *portName, int lowLevelPortAddress
     else
     {
         new pcsController(portName,
-                          lowLevelPortAddress, numAxes,
+                          lowLevelPortAddress,numSlaves, numAxes,
                           movingPollPeriod / 1000.,
                           idlePollPeriod / 1000.);
     }
@@ -737,20 +735,21 @@ extern "C" int pcsControllerConfig(const char *portName, int lowLevelPortAddress
 /* Code for iocsh registration for pcsController*/
 static const iocshArg pcsControllerConfigArg0 = {"Port name", iocshArgString};
 static const iocshArg pcsControllerConfigArg1 = {"Low level port address", iocshArgInt};
-static const iocshArg pcsControllerConfigArg2 = {"Number of axes", iocshArgInt};
-static const iocshArg pcsControllerConfigArg3 = {"Moving poll period (ms)", iocshArgInt};
-static const iocshArg pcsControllerConfigArg4 = {"Idle poll period (ms)", iocshArgInt};
+static const iocshArg pcsControllerConfigArg2 = {"Number of slaves", iocshArgInt};
+static const iocshArg pcsControllerConfigArg3 = {"Number of axes", iocshArgInt};
+static const iocshArg pcsControllerConfigArg4 = {"Moving poll period (ms)", iocshArgInt};
+static const iocshArg pcsControllerConfigArg5 = {"Idle poll period (ms)", iocshArgInt};
 
 static const iocshArg* const pcsControllerConfigArgs[] =
-    {&pcsControllerConfigArg0, &pcsControllerConfigArg1, &pcsControllerConfigArg2, &pcsControllerConfigArg3, &pcsControllerConfigArg4};
+    {&pcsControllerConfigArg0, &pcsControllerConfigArg1, &pcsControllerConfigArg2, &pcsControllerConfigArg3, &pcsControllerConfigArg4, &pcsControllerConfigArg5};
 
 static const iocshFuncDef configPcsController =
-    {"pcsControllerConfig", 5, pcsControllerConfigArgs};
+    {"pcsControllerConfig", 6, pcsControllerConfigArgs};
 
 static void configPcsControllerCallFunc(const iocshArgBuf *args)
 {
     pcsControllerConfig(args[0].sval, args[1].ival, args[2].ival,
-        args[3].ival, args[4].ival);
+        args[3].ival, args[4].ival, args[5].ival);
 }
 
 static void PcsControllerRegister(void)

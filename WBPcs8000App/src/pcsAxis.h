@@ -23,7 +23,7 @@ class pcsController;
 
 class pcsAxis : public asynMotorAxis{
     public:
-    pcsAxis(pcsController *ctrl, int axisNo, int slave);
+    pcsAxis(pcsController *ctrl, int axisNo, int slave,const char* priFeedback,const char* secFeedback);
     ~pcsAxis();
     void initialise(int axisNo);
 
@@ -48,6 +48,7 @@ private:
     int scale_;
     int slave_;
     int primaryFeedbackStream, secondaryFeedbackStream;
+    char primaryFeedbackString[10],secondaryFeedbackString[10];
 
     /* Vector storing the XPATH locations all the control_set parameters (Tuning) and their values taken from asynParams
      * These values are written to in pcsController::writeFloat64() */

@@ -1,5 +1,4 @@
-#% macro, FEEDBACK, Phys stream for primary feedback
-#% macro, FEEDBACK2, Phys stream for secondary feedback
+
 #% macro, KP, PIDx controller, Kp.
 #% macro, TI, PIDx controller, Ti.
 #% macro, TD, PIDx controller, Td.
@@ -150,20 +149,4 @@ record(ao, "$(P)$(M):PK") {
     field(DTYP, "asynFloat64")
 	field(OUT,"@asyn($(PORT),$(ADDR))AXIS_PK")
     field(VAL, "$(PK)")
-}
-
-#% autosave 1 VAL
-record(ao, "$(P)$(M):FEEDBACK") {
-    field(PINI, "YES")
-    field(DTYP, "asynFloat64")
-	field(OUT,"@asyn($(PORT),$(ADDR))AXIS_FEEDBACK")
-    field(VAL, "$(FEEDBACK)")
-}
-
-#% autosave 1 VAL
-record(ao, "$(P)$(M):FEEDBACK2") {
-    field(PINI, "YES")
-    field(DTYP, "asynFloat64")
-	field(OUT,"@asyn($(PORT),$(ADDR))AXIS_FEEDBACK2")
-    field(VAL, "$(FEEDBACK2)")
 }

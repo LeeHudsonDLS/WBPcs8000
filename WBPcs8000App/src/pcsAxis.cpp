@@ -8,14 +8,12 @@
 
 #include <epicsExport.h>
 
-pcsAxis::pcsAxis(pcsController *ctrl, int axisNo, int slave)
+pcsAxis::pcsAxis(pcsController *ctrl, int axisNo, int slave, const char* priFeedback, const char* secFeedback)
         :asynMotorAxis((asynMotorController *) ctrl, axisNo),
         ctrl_(ctrl),
         slave_(slave),
         relativeMoveSequencer(relativeMoveTemplate),
-        absoluteMoveSequencer(absoluteMoveTemplate),
-        primaryFeedbackStream(0),
-        secondaryFeedbackStream(0){
+        absoluteMoveSequencer(absoluteMoveTemplate){
 
     // Look into MSTA bits for enabling motors
     static const char *functionName = "pcsAxis::pcsAxis";
@@ -26,6 +24,10 @@ pcsAxis::pcsAxis(pcsController *ctrl, int axisNo, int slave)
     //Initialize non-static data members
     velocity_ = 0.0;
     accel_ = 0.0;
+
+    sprintf(primaryFeedbackString,"%s",priFeedback);
+    sprintf(secondaryFeedbackString,"%s",secFeedback);
+
     initialise(axisNo_);
     relativeMoveSequencer.setElement("//slave",slave_);
     absoluteMoveSequencer.setElement("//slave",slave_);
@@ -74,17 +76,14 @@ asynStatus pcsAxis::move(double position, int relative, double minVelocity, doub
     static const char *functionName = "move";
     char seqBuffer[4096];
     char rxBuffer[1024];
-    char primaryFeedbackString[10],secondaryFeedbackString[10];
     double decelTime,decelDist,midPosition;
     printf("pcsAxis::move(%f) called\n",position);
     rxBuffer[0]='\0';
     ctrl_->inString_[0]='\0';
 
 
-    sprintf(primaryFeedbackString,"phys%d",primaryFeedbackStream);
     absoluteMoveSequencer.setElement("//stream",primaryFeedbackString);
 
-    sprintf(secondaryFeedbackString,"phys%d",secondaryFeedbackStream);
     absoluteMoveSequencer.setElement("//stream2",secondaryFeedbackString);
 
     /*
@@ -230,7 +229,7 @@ pcsAxis::~pcsAxis(){
   * \param[in] axisNum The number of the axis, zero based.
   * \param[in] homeMode The homing mode of the axis
   */
-extern "C" int pcsAxisConfig(const char *controllerName, int axisNum, int slave)
+extern "C" int pcsAxisConfig(const char *controllerName, int axisNum, int slave, const char *priFeedback, const char *secFeedback)
 {
     int result = asynSuccess;
     pcsController* controller = (pcsController*)findAsynPortDriver(controllerName);
@@ -241,7 +240,7 @@ extern "C" int pcsAxisConfig(const char *controllerName, int axisNum, int slave)
     }
     else
     {
-        new pcsAxis(controller, axisNum,slave);
+        new pcsAxis(controller, axisNum,slave,priFeedback,secFeedback);
     }
     return result;
 }
@@ -256,17 +255,21 @@ extern "C" int pcsAxisConfig(const char *controllerName, int axisNum, int slave)
 static const iocshArg pcsAxisConfigArg0 = {"Controller port name", iocshArgString};
 static const iocshArg pcsAxisConfigArg1 = {"Axis number", iocshArgInt};
 static const iocshArg pcsAxisConfigArg2 = {"Slave number", iocshArgInt};
+static const iocshArg pcsAxisConfigArg3 = {"Primary Feedback", iocshArgString};
+static const iocshArg pcsAxisConfigArg4 = {"Secondary Feedback", iocshArgString};
 
 static const iocshArg *const pcsAxisConfigArgs[] = {&pcsAxisConfigArg0,
                                                     &pcsAxisConfigArg1,
-                                                    &pcsAxisConfigArg2};
+                                                    &pcsAxisConfigArg2,
+                                                    &pcsAxisConfigArg3,
+                                                    &pcsAxisConfigArg4};
 
 static const iocshFuncDef configPcsAxis =
-        {"pcsAxisConfig", 3, pcsAxisConfigArgs};
+        {"pcsAxisConfig", 5, pcsAxisConfigArgs};
 
 static void configPcsAxisCallFunc(const iocshArgBuf *args)
 {
-    pcsAxisConfig(args[0].sval, args[1].ival, args[2].ival);
+    pcsAxisConfig(args[0].sval, args[1].ival, args[2].ival,args[3].sval,args[4].sval);
 }
 
 static void PcsAxisRegister(void)
