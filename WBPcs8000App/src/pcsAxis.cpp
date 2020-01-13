@@ -66,6 +66,20 @@ void pcsAxis::initialise(int axisNo) {
     //sprintf(ctrl_->outString_, "%s",udpSetup.getXml().c_str());
     //ctrl_->writeController();
 
+    /* Extract the feedback stream numbers from the string */
+    sscanf(primaryFeedbackString,"phys%d",&primaryFeedback);
+    sscanf(secondaryFeedbackString,"phys%d",&secondaryFeedback);
+
+
+    /* Register this axis to a feedback code. The feedback code corresponds to the code
+     * that comes with each udp packet to determine the which sensor the packet is referring to.
+     * It's not always the feedback stream number unfortunately*/
+    if(primaryFeedback>=1 && primaryFeedback <=13){
+        ctrl_->registerFeedback(slave_,primaryFeedback,axisNo);
+    }else{
+        ctrl_->registerFeedback(slave_,primaryFeedback+67,axisNo);
+    }
+
 }
 
 asynStatus pcsAxis::move(double position, int relative, double minVelocity, double maxVelocity, double acceleration){

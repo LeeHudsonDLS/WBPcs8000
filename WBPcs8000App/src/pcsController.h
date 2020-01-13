@@ -142,6 +142,8 @@ public:
     static void tcpClientConnectedCallback(void *drvPvt, asynUser *pasynUser, char *portName,
                                            size_t len, int eomReason);
     void eventListener(portData *pPvt);
+    void registerFeedback(int slave, int feedback, int axisNo);
+
     char* lowLevelPortName;
     char* streamPortName;
     char* eventPortName;
@@ -192,6 +194,8 @@ private:
     epicsEventId stopEventId;
     friend class pcsAxis;
     int clientsConnected;
+
+    std::vector<std::map<int, int> > feedbackMap;
 
     asynStatus configureServer(const char* portname, portData *&pPvt, interruptCallbackOctet callBackRoutine);
     asynOctet *pasynOctet;

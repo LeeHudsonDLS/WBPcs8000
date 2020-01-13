@@ -47,7 +47,7 @@ private:
     double accel_;
     int scale_;
     int slave_;
-    int primaryFeedbackStream, secondaryFeedbackStream;
+    int primaryFeedback, secondaryFeedback;
     char primaryFeedbackString[10],secondaryFeedbackString[10];
 
     /* Vector storing the XPATH locations all the control_set parameters (Tuning) and their values taken from asynParams

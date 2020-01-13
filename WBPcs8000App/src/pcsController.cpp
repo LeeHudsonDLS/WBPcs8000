@@ -71,7 +71,12 @@ pcsController::pcsController(const char *portName, int lowLevelPortAddress, int 
     controlSetParams.push_back(std::pair<std::string,int>(PCS_A_pkParamString,0));
 
 
+
     createAsynParams();
+
+    /* Setup data structure to store which feedback code belongs to which axis */
+    for(int i = 0; i < numSlaves_; i++)
+        feedbackMap.push_back(std::map<int,int>());
 
     driverName = "pcsController";
 
@@ -139,7 +144,7 @@ pcsController::pcsController(const char *portName, int lowLevelPortAddress, int 
     /*
      * Wait for all TCP clients to be connected. Should be 1 client per axis/controller.
      */
-    while(clientsConnected < numAxes){
+    while(clientsConnected < numSlaves){
     }
 
     // Configure asyn for udp sensor stream
@@ -406,6 +411,7 @@ void pcsController::udpReadTask() {
     int eomReason;
     int packetIndex = 0;
     int scale;
+    int axis;
     pcsAxis* pAxis;
 
     while(axesInitialised < numAxes_-1){
@@ -455,12 +461,18 @@ void pcsController::udpReadTask() {
             memcpy(&PACKET.data, &rxBuffer[packetIndex], 4);
             packetIndex += 4;
 
-            if (PACKET.code == POSITION_UDP_STREAM_CODE) {
-                lock();
-                pAxis = getAxis(PACKET.slave + 1);
-                pAxis->setDoubleParam(motorPosition_, PACKET.data * pAxis->scale_);
-                unlock();
+            /* Is the information a sensor? */
+            if((PACKET.code >= 1 && PACKET.code <= 13)||PACKET.code == 81 || PACKET.code == 82){
+
+                axis = feedbackMap[PACKET.slave].find(PACKET.code)->second;
+                if(axis>0){
+                    pAxis = getAxis(axis);
+                    lock();
+                    pAxis->setDoubleParam(motorPosition_, PACKET.data * pAxis->scale_);
+                    unlock();
+                }
             }
+
         }
     }
 
@@ -704,6 +716,13 @@ asynStatus pcsController::writeReadController() {
         nread += nbytesIn;
     }
     return status;
+}
+
+
+void pcsController::registerFeedback(int slave, int feedback, int axisNo) {
+
+    feedbackMap[slave].insert(std::pair<int,int>(feedback,axisNo));
+
 }
 
 
