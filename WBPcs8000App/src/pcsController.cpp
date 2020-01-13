@@ -419,17 +419,17 @@ void pcsController::udpReadTask() {
     //Configure UDP streams and generic parameters for all axes
     for(int i = 0; i < numAxes_-1; i++) {
         pAxis = getAxis(i+1);
-        status = sendXmlCommand(pAxis->slave_,REGISTER_STREAM_PARAM,"phys14");
+        status = sendXmlCommand(pAxis->slave_,REGISTER_STREAM_PARAM,pAxis->primaryFeedbackString);
 
+    }
+
+    for(int i = 0; i < numSlaves_; i++){
         // Enable motor
         status = sendXmlCommand(i,SYS_STATE_PARAM,"Ready");
+        // Start UDP
+        status = sendXmlCommand(i,START_UDP_CMD);
     }
 
-    //Start UDP
-    for(int i = 0; i < numAxes_-1; i++) {
-        status = sendXmlCommand(i,START_UDP_CMD);
-        printf("Starting UDP\n\n");
-    }
 
     while(1){
         packetIndex = 0;
