@@ -388,6 +388,12 @@ void pcsController::eventListener(pcsController::portData *pPvt) {
                             unlock();
                         }
                         break;
+                    case SYNTH_COMPLETE_EVT:
+                        lock();
+                        pAxis->setIntegerParam(motorStatusDone_, 1);
+                        unlock();
+
+                        break;
                     case PLIM_STATE_CHANGE_EVT:
                         lock();
                         pAxis->setDoubleParam(motorHighLimit_, PACKET.ev_value ^ 1);
@@ -548,67 +554,42 @@ asynStatus pcsController::writeOctet(asynUser *pasynUser, const char *value, siz
     pcsAxis* pAxis;
     pAxis = getAxis(pasynUser);
 
-    /* User has sent a custom sequencer */
-    if(pasynUser->reason == PCS_C_XmlSequencer[0]){
-        if(Sequencer::isStringXML(value)){
 
-            /* Update the asyn parameter*/
-            lock();
-            setStringParam(PCS_C_XmlSequencer[0],value);
-            unlock();
+    for(int i = 0; i < MAX_SLAVES; i++){
 
-            /* Send to controller */
-            sprintf(outString_,value);
-            writeReadController();
+        /* User has sent a custom sequencer */
+        if(pasynUser->reason == PCS_C_XmlSequencer[i]){
+            if(Sequencer::isStringXML(value)){
 
-            /* Determine if the PCS8000 is happy with the sequencer */
-            if(Sequencer::containsAck(inString_)){
+                /* Update the asyn parameter*/
                 lock();
-                setIntegerParam(PCS_C_UserXmlLoaded[0], 1);
+                setStringParam(PCS_C_XmlSequencer[i],value);
                 unlock();
-            }else {
+
+                /* Send to controller */
+                sprintf(outString_,value);
+                writeReadController();
+
+                /* Determine if the PCS8000 is happy with the sequencer */
+                if(Sequencer::containsAck(inString_)){
+                    lock();
+                    setIntegerParam(PCS_C_UserXmlLoaded[i], 1);
+                    unlock();
+                }else {
+                    lock();
+                    setIntegerParam(PCS_C_UserXmlLoaded[i], 0);
+                    unlock();
+                }
+
+            }else{
                 lock();
-                setIntegerParam(PCS_C_UserXmlLoaded[0], 0);
+                setIntegerParam(PCS_C_UserXmlLoaded[i], 0);
                 unlock();
             }
-
-        }else{
-            lock();
-            setIntegerParam(PCS_C_UserXmlLoaded[0], 0);
-            unlock();
         }
     }
 
-    /* User has sent a custom sequencer */
-    if(pasynUser->reason == PCS_C_XmlSequencer[1]){
-        if(Sequencer::isStringXML(value)){
 
-            /* Update the asyn parameter*/
-            lock();
-            setStringParam(PCS_C_XmlSequencer[1],value);
-            unlock();
-
-            /* Send to controller */
-            sprintf(outString_,value);
-            writeReadController();
-
-            /* Determine if the PCS8000 is happy with the sequencer */
-            if(Sequencer::containsAck(inString_)){
-                lock();
-                setIntegerParam(PCS_C_UserXmlLoaded[1], 1);
-                unlock();
-            }else {
-                lock();
-                setIntegerParam(PCS_C_UserXmlLoaded[1], 0);
-                unlock();
-            }
-
-        }else{
-            lock();
-            setIntegerParam(PCS_C_UserXmlLoaded[1], 0);
-            unlock();
-        }
-    }
 
     callParamCallbacks();
     *nActual = strlen(value);

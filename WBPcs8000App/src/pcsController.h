@@ -79,6 +79,7 @@
 #define SEQ_STATE_CHANGE_EVT    20
 #define NLIM_STATE_CHANGE_EVT    203
 #define PLIM_STATE_CHANGE_EVT    202
+#define SYNTH_COMPLETE_EVT      303
 
 
 

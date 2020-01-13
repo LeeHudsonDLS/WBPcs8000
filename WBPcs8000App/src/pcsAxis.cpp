@@ -100,6 +100,9 @@ asynStatus pcsAxis::move(double position, int relative, double minVelocity, doub
     rxBuffer[0]='\0';
     ctrl_->inString_[0]='\0';
 
+    // Stop the sequencer before moving
+    status = pasynOctetSyncIO->writeRead(ctrl_->pasynUserController_,ctrl_->commandConstructor.getXml(slave_,SEQ_CONTROL_PARAM,"Setup").c_str(),strlen(ctrl_->commandConstructor.getXml(slave_,SEQ_CONTROL_PARAM,"Setup").c_str()),rxBuffer,1024,0.1,&nwrite,&nread,&eomReason);
+
 
     absoluteMoveSequencer.setElement("//stream",primaryFeedbackString);
 

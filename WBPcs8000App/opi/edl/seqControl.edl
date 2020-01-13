@@ -3,8 +3,8 @@ beginScreenProperties
 major 4
 minor 0
 release 1
-x 937
-y 601
+x 605
+y 404
 w 500
 h 470
 font "arial-bold-r-12.0"
@@ -74,29 +74,6 @@ value {
 }
 autoSize
 border
-endObjectProperties
-
-# (Related Display)
-object relatedDisplayClass
-beginObjectProperties
-major 4
-minor 4
-release 0
-x 5
-y 160
-w 175
-h 20
-fgColor index 43
-bgColor index 3
-topShadowColor index 1
-botShadowColor index 11
-font "arial-bold-r-14.0"
-buttonLabel "Advanced..."
-numPvs 4
-numDsps 1
-displayFileName {
-  0 "ADBaseAdvanced"
-}
 endObjectProperties
 
 # (Group)
@@ -361,5 +338,27 @@ endObjectProperties
 
 endGroup
 
+endObjectProperties
+
+# (Text Control)
+object activeXTextDspClass
+beginObjectProperties
+major 4
+minor 6
+release 0
+x 285
+y 70
+w 185
+h 110
+controlPv "$(P)$(M):SequencerXML"
+font "arial-bold-r-12.0"
+fgColor index 14
+bgColor index 3
+useDisplayBg
+limitsFromDb
+nullColor index 25
+useHexPrefix
+newPos
+objType "controls"
 endObjectProperties
 
