@@ -18,12 +18,13 @@
 #include "Sequencer.h"
 
 #define NO_OF_CONTROL_SET_PARAMS 16
+#define POSITION_SENSOR 14
 
 class pcsController;
 
 class pcsAxis : public asynMotorAxis{
     public:
-    pcsAxis(pcsController *ctrl, int axisNo, int slave,const char* priFeedback,const char* secFeedback);
+    pcsAxis(pcsController *ctrl, int axisNo, int slave,const char* priFeedback,const char* secFeedback, double minSensorVal);
     ~pcsAxis();
     void initialise(int axisNo);
 
@@ -44,10 +45,11 @@ private:
     Sequencer absoluteMoveSequencer;
     double velocity_ ;
     double accel_;
+    double minSensorVal_;
     int scale_;
     int slave_;
     int primaryFeedback, secondaryFeedback;
-    char primaryFeedbackString[10],secondaryFeedbackString[10];
+    char primaryFeedbackString[10],secondaryFeedbackString[10],minTrigger[48],allTriggers[96];
 
     /* Vector storing the XPATH locations all the control_set parameters (Tuning) and their values taken from asynParams
      * These values are written to in pcsController::writeFloat64() */

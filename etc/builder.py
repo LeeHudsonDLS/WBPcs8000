@@ -100,7 +100,7 @@ class pcsAxis(Device):
 
 
     # Constructor, just store parameters
-    def __init__(self, SLAVE,P,M,ADDR,DESC,VELO,PREC,EGU,TWV,FEEDBACK1='phys14',FEEDBACK2='phys15',KP=0.5,TI=0.05,TD=0,T1=0.000125,KE=60,KE2=0,KFF=1200,KREI=0,TAU=0,ELIM=0,KDCC=0,SYM_MAN=0,SYM_ADP=0,GKI=0,TKI=0,PK=1, **args):
+    def __init__(self, SLAVE,P,M,ADDR,DESC,VELO,PREC,EGU,TWV,FEEDBACK1='phys14',FEEDBACK2='phys15', SEN_MIN = 0.0,KP=0.5,TI=0.05,TD=0,T1=0.000125,KE=60,KE2=0,KFF=1200,KREI=0,TAU=0,ELIM=0,KDCC=0,SYM_MAN=0,SYM_ADP=0,GKI=0,TKI=0,PK=1, **args):
         Device.__init__(self)
         self.SLAVE = SLAVE
         self.SLAVE_NO = SLAVE.SLAVE_NO
@@ -117,6 +117,7 @@ class pcsAxis(Device):
         self.TWV = TWV
         self.FEEDBACK1 = FEEDBACK1
         self.FEEDBACK2 = FEEDBACK2
+        self.SEN_MIN = float(SEN_MIN)
         self.KP = KP
         self.TI = TI
         self.TD = TD
@@ -155,7 +156,7 @@ class pcsAxis(Device):
     def Initialise(self):
         print "# Configure Walter and Bai PCS8000 Axis"
         print "# pcsAxisConfig(%(CONTROLLER)s, %(ADDR)d)"
-        print "pcsAxisConfig(%(PORT)s, %(ADDR)d,%(SLAVE_NO)d, %(FEEDBACK1)s,%(FEEDBACK2)s)" % self.__dict__
+        print "pcsAxisConfig(%(PORT)s, %(ADDR)d,%(SLAVE_NO)d, %(FEEDBACK1)s,%(FEEDBACK2)s,%(SEN_MIN)f)" % self.__dict__
 
     # Arguments
     ArgInfo = makeArgInfo(__init__,
@@ -168,6 +169,7 @@ class pcsAxis(Device):
                           PREC = Simple("Axis number", int),
                           EGU = Simple("Axis number", str),
                           TWV = Simple("Axis number", float),
+                          SEN_MIN = Simple("Minimum sensor value threshold", float),
                           FEEDBACK1 = Choice("Phys stream for primary feedback", ['phys'+str(i) for i in range(1,16)]),
                           FEEDBACK2 = Choice("Phys stream for secondary feedback", ['phys'+str(i) for i in range(1,16)]),
                           KP = Simple("PIDx controller, Kp.", float),

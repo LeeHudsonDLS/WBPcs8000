@@ -8,10 +8,11 @@
 
 #include <epicsExport.h>
 
-pcsAxis::pcsAxis(pcsController *ctrl, int axisNo, int slave, const char* priFeedback, const char* secFeedback)
+pcsAxis::pcsAxis(pcsController *ctrl, int axisNo, int slave, const char* priFeedback, const char* secFeedback, double minSensorVal)
         :asynMotorAxis((asynMotorController *) ctrl, axisNo),
         ctrl_(ctrl),
         slave_(slave),
+        minSensorVal_(minSensorVal),
         absoluteMoveSequencer(){
 
     // Look into MSTA bits for enabling motors
@@ -80,7 +81,7 @@ void pcsAxis::initialise(int axisNo) {
 
     ctrl_->registerAxisToSlave(slave_,axisNo);
 
-    if(primaryFeedback == 14)
+    if(primaryFeedback == POSITION_SENSOR)
         absoluteMoveSequencer.loadXML(absoluteMoveTemplate);
     else
         absoluteMoveSequencer.loadXML(moveWaitTemplate);
@@ -164,6 +165,37 @@ asynStatus pcsAxis::move(double position, int relative, double minVelocity, doub
     absoluteMoveSequencer.setElement("/sequencer_prog/synth_set[2]/rate",maxVelocity/scale_);
     absoluteMoveSequencer.setElement("/sequencer_prog/synth_set[2]/end_rate",0.001);
     absoluteMoveSequencer.setElement("/sequencer_prog/synth_set[2]/end_ampl",position/scale_);
+
+
+    /* If the primary feedback device is anything other than position we will need to add
+     * a minimum allowable value to prevent run away*/
+    if(primaryFeedback!=POSITION_SENSOR){
+
+
+        absoluteMoveSequencer.setElement("/sequencer_prog/clear[1]/ndrag",primaryFeedbackString);
+        absoluteMoveSequencer.setElement("/sequencer_prog/clear[3]/ndrag",primaryFeedbackString);
+        absoluteMoveSequencer.setElement("/sequencer_prog/clear[5]/ndrag",primaryFeedbackString);
+
+        sprintf(minTrigger,"TRIG_MIN_PHY(%d)",primaryFeedback);
+        absoluteMoveSequencer.setElement("/sequencer_prog/trigger_set[1]/name",minTrigger);
+        absoluteMoveSequencer.setElement("/sequencer_prog/trigger_set[1]/value",minSensorVal_);
+        absoluteMoveSequencer.setElement("/sequencer_prog/trigger_set[2]/name",minTrigger);
+        absoluteMoveSequencer.setElement("/sequencer_prog/trigger_set[2]/value",minSensorVal_);
+        absoluteMoveSequencer.setElement("/sequencer_prog/trigger_set[3]/name",minTrigger);
+        absoluteMoveSequencer.setElement("/sequencer_prog/trigger_set[3]/value",minSensorVal_);
+
+
+        absoluteMoveSequencer.setElement("/sequencer_prog/clear[4]/triggers",minTrigger);
+        absoluteMoveSequencer.setElement("/sequencer_prog/wait[2]/triggers",minTrigger);
+        absoluteMoveSequencer.setElement("/sequencer_prog/clear[6]/triggers",minTrigger);
+        absoluteMoveSequencer.setElement("/sequencer_prog/wait[3]/triggers",minTrigger);
+
+        sprintf(allTriggers,"TRIG_SYNTH_R;TRIG_MIN_PHY(%d)",primaryFeedback);
+        absoluteMoveSequencer.setElement("/sequencer_prog/clear[2]/triggers",allTriggers);
+        absoluteMoveSequencer.setElement("/sequencer_prog/wait[1]/triggers",allTriggers);
+
+
+    }
 
 
     // Get the completed sequncer in XML form
@@ -251,7 +283,7 @@ pcsAxis::~pcsAxis(){
   * \param[in] axisNum The number of the axis, zero based.
   * \param[in] homeMode The homing mode of the axis
   */
-extern "C" int pcsAxisConfig(const char *controllerName, int axisNum, int slave, const char *priFeedback, const char *secFeedback)
+extern "C" int pcsAxisConfig(const char *controllerName, int axisNum, int slave, const char *priFeedback, const char *secFeedback, double minSensorVal)
 {
     int result = asynSuccess;
     pcsController* controller = (pcsController*)findAsynPortDriver(controllerName);
@@ -262,7 +294,7 @@ extern "C" int pcsAxisConfig(const char *controllerName, int axisNum, int slave,
     }
     else
     {
-        new pcsAxis(controller, axisNum,slave,priFeedback,secFeedback);
+        new pcsAxis(controller, axisNum,slave,priFeedback,secFeedback,minSensorVal);
     }
     return result;
 }
@@ -279,19 +311,21 @@ static const iocshArg pcsAxisConfigArg1 = {"Axis number", iocshArgInt};
 static const iocshArg pcsAxisConfigArg2 = {"Slave number", iocshArgInt};
 static const iocshArg pcsAxisConfigArg3 = {"Primary Feedback", iocshArgString};
 static const iocshArg pcsAxisConfigArg4 = {"Secondary Feedback", iocshArgString};
+static const iocshArg pcsAxisConfigArg5 = {"Minimum sensor value", iocshArgDouble};
 
 static const iocshArg *const pcsAxisConfigArgs[] = {&pcsAxisConfigArg0,
                                                     &pcsAxisConfigArg1,
                                                     &pcsAxisConfigArg2,
                                                     &pcsAxisConfigArg3,
-                                                    &pcsAxisConfigArg4};
+                                                    &pcsAxisConfigArg4,
+                                                    &pcsAxisConfigArg5};
 
 static const iocshFuncDef configPcsAxis =
-        {"pcsAxisConfig", 5, pcsAxisConfigArgs};
+        {"pcsAxisConfig", 6, pcsAxisConfigArgs};
 
 static void configPcsAxisCallFunc(const iocshArgBuf *args)
 {
-    pcsAxisConfig(args[0].sval, args[1].ival, args[2].ival,args[3].sval,args[4].sval);
+    pcsAxisConfig(args[0].sval, args[1].ival, args[2].ival,args[3].sval,args[4].sval,args[5].dval);
 }
 
 static void PcsAxisRegister(void)
