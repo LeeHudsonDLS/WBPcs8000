@@ -100,13 +100,13 @@ asynStatus pcsAxis::move(double position, int relative, double minVelocity, doub
     printf("pcsAxis::move(%f) called\n",position);
     rxBuffer[0]='\0';
     ctrl_->inString_[0]='\0';
+    double accRate,accTime,distance,actVel,deltaDist,theta,moveVel,actualAccTime,maxVelocityScaled;
 
     // Stop the sequencer before moving
     status = pasynOctetSyncIO->writeRead(ctrl_->pasynUserController_,ctrl_->commandConstructor.getXml(slave_,SEQ_CONTROL_PARAM,"Setup").c_str(),strlen(ctrl_->commandConstructor.getXml(slave_,SEQ_CONTROL_PARAM,"Setup").c_str()),rxBuffer,1024,0.1,&nwrite,&nread,&eomReason);
 
 
     absoluteMoveSequencer.setElement("//stream",primaryFeedbackString);
-
     absoluteMoveSequencer.setElement("//stream2",secondaryFeedbackString);
 
     /*
@@ -119,25 +119,65 @@ asynStatus pcsAxis::move(double position, int relative, double minVelocity, doub
         pidIterator++;
     }
 
+    /* Max velocity in EGUs*/
+    maxVelocityScaled=maxVelocity/scale_;
 
-    /*
-     * Determine the amount of time the axis will take to decelerate and the amount the axis will travel
-     * during this deceleration.
-     */
-    decelTime = maxVelocity/acceleration;
-    decelDist = ((maxVelocity/scale_)*decelTime)/2;
+    /* Acceleration rate in EGUs */
+    accRate=acceleration/scale_;
 
-    /*
-     * Determine "midPosition". Here "position" is the demand from the motor record and status_.position is the
-     * actual position. The "midPosition" is the end position for the first synthesizer, the first synthesizer
-     * takes care of the initial acceleration and the entire move up to the point where deceleration starts. This
-     * "midPosition" must be the desired end position - how far the axis will travel during deceleration given
-     * the velocity and deceleration rate.
-     */
-    if(position > status_.position)
-        midPosition=(position/scale_)-decelDist;
-    else
-        midPosition=(position/scale_)+decelDist;
+    /* Total distance to move in EGUs*/
+    distance = fabs(position - status_.position)/scale_;
+
+    /* Acceleration time in seconds */
+    accTime = maxVelocityScaled/accRate;
+
+    /* The distance covered during either the acceleration or deceleration */
+    deltaDist= (accTime * maxVelocityScaled);
+
+    /* The angle of the acceleration profile */
+    theta = atan2(maxVelocityScaled,accTime)*(180/M_PI);
+
+
+    /* If the distance to be travelled will be covered during the accel/decel
+     * phase of the profile then a triangular motion profile should be applied*/
+    if(deltaDist > distance){
+
+        /* Triangle profile */
+        actualAccTime = sqrt(distance/(maxVelocityScaled/accTime));
+        actVel=(maxVelocityScaled/accTime)*actualAccTime;
+        moveVel = actVel;
+
+        if(position > status_.position)
+            midPosition=(position/scale_)-(distance/2);
+        else
+            midPosition=(position/scale_)+(distance/2);
+
+    }else{
+        moveVel=maxVelocityScaled;
+
+        /*
+         * Determine the amount of time the axis will take to decelerate and the amount the axis will travel
+         * during this deceleration.
+         * maxVelocity  -   VELO * MRES
+         * decelTime    -   .ACCL
+         */
+        decelTime = maxVelocity/acceleration;
+        decelDist = (maxVelocityScaled * decelTime) / 2;
+
+        /*
+         * Determine "midPosition". Here "position" is the demand from the motor record and status_.position is the
+         * actual position. The "midPosition" is the end position for the first synthesizer, the first synthesizer
+         * takes care of the initial acceleration and the entire move up to the point where deceleration starts. This
+         * "midPosition" must be the desired end position - how far the axis will travel during deceleration given
+         * the velocity and deceleration rate.
+         */
+        if(position > status_.position)
+            midPosition=(position/scale_)-decelDist;
+        else
+            midPosition=(position/scale_)+decelDist;
+
+    }
+
 
     /*
      * Set up the first half of the motion profile. The "rate" is 0 as this assumes starting from a stand still
@@ -149,7 +189,7 @@ asynStatus pcsAxis::move(double position, int relative, double minVelocity, doub
      */
     absoluteMoveSequencer.setElement("/sequencer_prog/synth_set[1]/acc",acceleration/scale_);
     absoluteMoveSequencer.setElement("/sequencer_prog/synth_set[1]/rate",0);
-    absoluteMoveSequencer.setElement("/sequencer_prog/synth_set[1]/end_rate",maxVelocity/scale_);
+    absoluteMoveSequencer.setElement("/sequencer_prog/synth_set[1]/end_rate",moveVel);
     absoluteMoveSequencer.setElement("/sequencer_prog/synth_set[1]/end_ampl",midPosition);
 
 
@@ -162,7 +202,7 @@ asynStatus pcsAxis::move(double position, int relative, double minVelocity, doub
      *        \
      */
     absoluteMoveSequencer.setElement("/sequencer_prog/synth_set[2]/acc",acceleration/scale_);
-    absoluteMoveSequencer.setElement("/sequencer_prog/synth_set[2]/rate",maxVelocity/scale_);
+    absoluteMoveSequencer.setElement("/sequencer_prog/synth_set[2]/rate",moveVel);
     absoluteMoveSequencer.setElement("/sequencer_prog/synth_set[2]/end_rate",0.001);
     absoluteMoveSequencer.setElement("/sequencer_prog/synth_set[2]/end_ampl",position/scale_);
 

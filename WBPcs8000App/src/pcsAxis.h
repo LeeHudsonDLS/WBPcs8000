@@ -16,6 +16,7 @@
 #include <stdlib.h>
 #include <asynOctetSyncIO.h>
 #include "Sequencer.h"
+#include <math.h>
 
 #define NO_OF_CONTROL_SET_PARAMS 16
 #define POSITION_SENSOR 14
