@@ -1,10 +1,10 @@
 rhel7_job:
-   tags:
-     - rhel7
-   script:
-     - make
-     - echo 'test script - does nothing yet'
+  tags:
+    - rhel7
+  script:
+    - make
+    - echo 'test script - does nothing yet'
   test:
     stage: test
     script:
-     - ./WBPcs8000App/tests/O.linux-x86_64/tests
+      - ./WBPcs8000App/tests/O.linux-x86_64/tests
