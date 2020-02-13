@@ -12,7 +12,6 @@ class pcsController;
 
 class XmlCommandConstructor{
 public:
-    XmlCommandConstructor(pcsController& crtl);
     void addInputParameter(const std::string& parameter, const std::string& csvCommand,int input);
     void addInputParameter(const std::string& parameter, const std::string& csvCommand);
     std::string getInputXml(int slave, const std::string& parameter);
@@ -28,5 +27,4 @@ private:
     std::map<std::string,std::string > inputMap;
     std::string addXML(const std::string& csvCommand, const std::string& val);
     std::string appendSlave(int slave, std::string xml);
-    pcsController& ctrl;
 };

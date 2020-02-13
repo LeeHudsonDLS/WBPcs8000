@@ -41,7 +41,7 @@ pcsController::pcsController(const char *portName, int lowLevelPortAddress, int 
                           1, // autoconnect
                               0,
                           0),
-                          commandConstructor(*this),
+                          commandConstructor(),
                           scale(AXIS_SCALE_FACTOR),
                           clientsConnected(0),
                           axesInitialised(0),

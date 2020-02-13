@@ -1,8 +1,6 @@
 #include "XmlCommandConstructor.h"
 
 
-XmlCommandConstructor::XmlCommandConstructor(pcsController &crtl): ctrl(crtl) {
-}
 
 /**
  * Method to derive an XML string form a comma delimited string. Only allows access to single element. Last element is the value.
