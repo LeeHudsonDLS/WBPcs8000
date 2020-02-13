@@ -19,7 +19,6 @@ pcsAxis::pcsAxis(pcsController *ctrl, int axisNo, int slave, const char* priFeed
     static const char *functionName = "pcsAxis::pcsAxis";
     asynPrint(ctrl_->pasynUserSelf, ASYN_TRACE_FLOW, "%s\r",functionName);
 
-
     scale_=ctrl_->scale;
     std::string file_path = __FILE__;
     //Initialize non-static data members
