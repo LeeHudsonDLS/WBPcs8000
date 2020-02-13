@@ -1,0 +1,5 @@
+rhel7_job:
+   tags:
+     - rhel7
+   script:
+     - echo 'test script - does nothing yet'
