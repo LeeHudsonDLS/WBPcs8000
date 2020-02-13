@@ -2,4 +2,5 @@ rhel7_job:
    tags:
      - rhel7
    script:
+     - make
      - echo 'test script - does nothing yet'
