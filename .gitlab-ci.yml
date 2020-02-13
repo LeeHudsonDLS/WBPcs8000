@@ -4,5 +4,7 @@ rhel7_job:
    script:
      - make
      - echo 'test script - does nothing yet'
-   unittests:
-     - ./WBPcs8000App/tests/O.linux-x86_64/tests
+  test:
+    stage: test
+      script:
+        - ./WBPcs8000App/tests/O.linux-x86_64/tests
