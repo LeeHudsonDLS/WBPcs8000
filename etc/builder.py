@@ -57,6 +57,9 @@ class _sequencerControl(AutoSubstitution):
 class _dls_pcs_asyn_motor(AutoSubstitution,MotorRecord):
     TemplateFile = "dls_pcs_asyn_motor.db"
 
+class _loopSwitch(AutoSubstitution):
+    TemplateFile =  "loopSwitch.db"
+
 class pcsSlave(Device):
     """Defines the device configuration"""
     WarnMacros = False
@@ -151,6 +154,8 @@ class pcsAxis(Device):
                             GKI=self.GKI,
                             TKI=self.TKI,
                             PK=self.PK)
+        if self.FEEDBACK1 != "phys14":
+            _loopSwitch(P=self.P,M=self.M,PORT=self.PORT,ADDR=self.ADDR)
 
     # Once per instantiation
     def Initialise(self):

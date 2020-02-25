@@ -38,8 +38,9 @@
 #define PCS_A_gkiParamString        "AXIS_GKI"
 #define PCS_A_tkiParamString        "AXIS_TKI"
 #define PCS_A_pkParamString         "AXIS_PK"
+#define PCS_A_enableLoopString      "AXIS_ENABLE_LOOP"
 
-#define NUM_OF_PCS_PARAMS   16+(MAX_SLAVES*4)
+#define NUM_OF_PCS_PARAMS   17+(MAX_SLAVES*4)
 
 // Items used for initial handshaking
 #define NAME "DLS"
@@ -170,6 +171,7 @@ protected:
     int PCS_C_XmlSequencer[MAX_SLAVES];
     int PCS_C_UserXmlLoaded[MAX_SLAVES];
     int PCS_C_StartSequencer[MAX_SLAVES];
+    int PCS_A_enableLoop;
 
     /* asyn parameters for the tuning */
     std::vector<std::pair<std::string,int> > controlSetParams;

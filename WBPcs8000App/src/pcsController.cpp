@@ -179,6 +179,7 @@ void pcsController::createAsynParams(void){
     asynStatus status = asynSuccess;
     char buffer[128];
     status = createParam(PCS_C_FirstParamString,asynParamInt32,&PCS_C_FirstParam);
+    status = createParam(PCS_A_enableLoopString,asynParamInt32,&PCS_A_enableLoop);
 
     /* Iterate through all the controlSetParams and create the asynDoubleParams */
     std::vector<std::pair<std::string,int> >::iterator it = controlSetParams.begin();
@@ -362,8 +363,8 @@ void pcsController::eventListener(pcsController::portData *pPvt) {
             packetIndex += 4;
             memcpy(&PACKET.num_data, &rxBuffer[packetIndex], 4);
             packetIndex += 4;
-            printf("nread:%d\n",nread);
-            printf("Server %u,%u,%llu,%u,%u\n",PACKET.ev_code,PACKET.slave,PACKET.ts,PACKET.ev_value,PACKET.num_data);
+            //printf("nread:%d\n",nread);
+            //printf("Server %u,%u,%llu,%u,%u\n",PACKET.ev_code,PACKET.slave,PACKET.ts,PACKET.ev_value,PACKET.num_data);
 
 
 
@@ -398,13 +399,13 @@ void pcsController::eventListener(pcsController::portData *pPvt) {
                         lock();
                         pAxis->setDoubleParam(motorHighLimit_, PACKET.ev_value ^ 1);
                         unlock();
-                        printf("Setting PLIM to %d\n", PACKET.ev_value ^ 1);
+                        //printf("Setting PLIM to %d\n", PACKET.ev_value ^ 1);
                         break;
                     case NLIM_STATE_CHANGE_EVT:
                         lock();
                         pAxis->setDoubleParam(motorLowLimit_, PACKET.ev_value ^ 1);
                         unlock();
-                        printf("Setting NLIM to %d\n", PACKET.ev_value ^ 1);
+                        //printf("Setting NLIM to %d\n", PACKET.ev_value ^ 1);
                         break;
                     default:
                         break;
@@ -502,9 +503,20 @@ void pcsController::udpReadTask() {
 asynStatus pcsController::writeInt32(asynUser *pasynUser, epicsInt32 value) {
     pcsAxis* pAxis;
     pAxis = getAxis(pasynUser);
+    asynStatus status;
 
+    status = asynSuccess;
+
+    /* If parameter is from base class call base class implementation */
     if(pasynUser->reason < PCS_C_FirstParam){
-        asynMotorController::writeInt32(pasynUser,value);
+        return asynMotorController::writeInt32(pasynUser,value);
+    }
+
+    if(pasynUser->reason == PCS_A_enableLoop){
+        if(value>0)
+            pAxis->setLoop(1);
+        else
+            pAxis->setLoop(0);
     }
 
     for(int i = 0; i < MAX_SLAVES; i++){
@@ -515,20 +527,24 @@ asynStatus pcsController::writeInt32(asynUser *pasynUser, epicsInt32 value) {
                 sprintf(outString_, commandConstructor.getXml(i, SEQ_CONTROL_PARAM, "Program").c_str());
             else
                 sprintf(outString_, commandConstructor.getXml(i, SEQ_CONTROL_PARAM, "Setup").c_str());
-            writeReadController();
+            status = writeReadController();
             if (Sequencer::containsAck(inString_)) {
                 /*Do something*/
             }
         }
 
     }
+    return status;
 
 }
 
 asynStatus pcsController::writeFloat64(asynUser *pasynUser, epicsFloat64 value) {
     pcsAxis* pAxis;
     pAxis = getAxis(pasynUser);
+    asynStatus status;
     int controlSetIndex = 0;
+
+    status = asynSuccess;
 
     if(pasynUser->reason < PCS_C_FirstParam){
         return asynMotorController::writeFloat64(pasynUser,value);

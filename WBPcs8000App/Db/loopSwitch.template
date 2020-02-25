@@ -1,0 +1,14 @@
+
+#% macro, P, Device prefix.
+#% macro, M, Device suffix.
+#% macro, PORT, Asyn port.
+#% macro, ADDR, Asyn address.
+
+
+record(bo, "$(P)$(M):ENABLE_LOOP") {
+   field(DTYP, "asynInt32")
+   field(OUT,"@asyn($(PORT),$(ADDR))AXIS_ENABLE_LOOP")
+   field(ZNAM, "Disabled")
+   field(ONAM, "Enabled")
+   field(VAL,  "0")
+}

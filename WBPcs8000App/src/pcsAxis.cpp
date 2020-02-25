@@ -88,6 +88,46 @@ void pcsAxis::initialise(int axisNo) {
 
 }
 
+void pcsAxis::setLoop(bool set) {
+
+    size_t nwrite,nread;
+    int eomReason;
+    double currentPositionScaled;
+    char seqBuffer[4096];
+    char rxBuffer[1024];
+    static const char *functionName = "setLoop";
+    asynStatus status;
+
+    currentPositionScaled = status_.position/scale_;
+
+    if(primaryFeedback==POSITION_SENSOR)
+        return;
+
+    if(set){
+
+        /* Set PID parameters */
+        setSeqControlParams();
+
+        absoluteMoveSequencer.setElement("/sequencer_prog/synth_set[1]/acc",0);
+        absoluteMoveSequencer.setElement("/sequencer_prog/synth_set[1]/rate",0);
+        absoluteMoveSequencer.setElement("/sequencer_prog/synth_set[1]/end_rate",0);
+        absoluteMoveSequencer.setElement("/sequencer_prog/synth_set[1]/end_ampl",currentPositionScaled);
+
+        absoluteMoveSequencer.setElement("/sequencer_prog/synth_set[2]/acc",0);
+        absoluteMoveSequencer.setElement("/sequencer_prog/synth_set[2]/rate",0);
+        absoluteMoveSequencer.setElement("/sequencer_prog/synth_set[2]/end_rate",0);
+        absoluteMoveSequencer.setElement("/sequencer_prog/synth_set[2]/end_ampl",currentPositionScaled);
+        setupSensorExitConditions();
+
+
+
+        status = sendSequencer(functionName);
+
+        ctrl_->wakeupPoller();
+
+    }
+}
+
 asynStatus pcsAxis::move(double position, int relative, double minVelocity, double maxVelocity, double acceleration){
 
     size_t nwrite,nread,nact;
@@ -109,15 +149,9 @@ asynStatus pcsAxis::move(double position, int relative, double minVelocity, doub
     absoluteMoveSequencer.setElement("//stream",primaryFeedbackString);
     absoluteMoveSequencer.setElement("//stream2",secondaryFeedbackString);
 
-    /*
-     * Set PID parameters from asyn parameters
-     */
+    /* Set PID parameters */
+    setSeqControlParams();
 
-    std::vector<std::pair<std::string,double> >::iterator pidIterator = controlSet_.begin();
-    while(pidIterator!=controlSet_.end()){
-        absoluteMoveSequencer.setElement(pidIterator->first.c_str(),pidIterator->second);
-        pidIterator++;
-    }
 
     /* Max velocity in EGUs*/
     maxVelocityScaled=maxVelocity/scale_;
@@ -210,36 +244,34 @@ asynStatus pcsAxis::move(double position, int relative, double minVelocity, doub
     /* If the primary feedback device is anything other than position we will need to add
      * a minimum allowable value to prevent run away*/
     if(primaryFeedback!=POSITION_SENSOR){
-
-
-        absoluteMoveSequencer.setElement("/sequencer_prog/clear[1]/ndrag",primaryFeedbackString);
-        absoluteMoveSequencer.setElement("/sequencer_prog/clear[3]/ndrag",primaryFeedbackString);
-        absoluteMoveSequencer.setElement("/sequencer_prog/clear[5]/ndrag",primaryFeedbackString);
-
-        sprintf(minTrigger,"TRIG_MIN_PHY(%d)",primaryFeedback);
-        absoluteMoveSequencer.setElement("/sequencer_prog/trigger_set[1]/name",minTrigger);
-        absoluteMoveSequencer.setElement("/sequencer_prog/trigger_set[1]/value",minSensorVal_);
-        absoluteMoveSequencer.setElement("/sequencer_prog/trigger_set[2]/name",minTrigger);
-        absoluteMoveSequencer.setElement("/sequencer_prog/trigger_set[2]/value",minSensorVal_);
-        absoluteMoveSequencer.setElement("/sequencer_prog/trigger_set[3]/name",minTrigger);
-        absoluteMoveSequencer.setElement("/sequencer_prog/trigger_set[3]/value",minSensorVal_);
-
-
-        absoluteMoveSequencer.setElement("/sequencer_prog/clear[4]/triggers",minTrigger);
-        absoluteMoveSequencer.setElement("/sequencer_prog/wait[2]/triggers",minTrigger);
-        absoluteMoveSequencer.setElement("/sequencer_prog/clear[6]/triggers",minTrigger);
-        absoluteMoveSequencer.setElement("/sequencer_prog/wait[3]/triggers",minTrigger);
-
-        sprintf(allTriggers,"TRIG_SYNTH_R;TRIG_MIN_PHY(%d)",primaryFeedback);
-        absoluteMoveSequencer.setElement("/sequencer_prog/clear[2]/triggers",allTriggers);
-        absoluteMoveSequencer.setElement("/sequencer_prog/wait[1]/triggers",allTriggers);
-
-
+        setupSensorExitConditions();
     }
 
+    status = sendSequencer(functionName);
+
+    ctrl_->wakeupPoller();
+    return status;
+}
+
+void pcsAxis::setSeqControlParams() {
+
+    std::vector<std::pair<std::string,double> >::iterator pidIterator = controlSet_.begin();
+    while(pidIterator!=controlSet_.end()){
+        absoluteMoveSequencer.setElement(pidIterator->first.c_str(),pidIterator->second);
+        pidIterator++;
+    }
+}
+
+asynStatus pcsAxis::sendSequencer(const char* functionName) {
+
+    size_t nwrite,nread,nact;
+    int eomReason;
+    char seqBuffer[4096];
+    char rxBuffer[1024];
 
     // Get the completed sequncer in XML form
     sprintf(seqBuffer,absoluteMoveSequencer.getXml().c_str());
+    printf("%s\n",seqBuffer);
     status = pasynOctetSyncIO->writeRead(ctrl_->pasynUserController_,ctrl_->commandConstructor.getXml(slave_,SEQ_CONTROL_PARAM,"Setup").c_str(),strlen(ctrl_->commandConstructor.getXml(slave_,SEQ_CONTROL_PARAM,"Setup").c_str()),rxBuffer,1024,0.1,&nwrite,&nread,&eomReason);
 
     // Send the sequencer to the controller
@@ -262,8 +294,38 @@ asynStatus pcsAxis::move(double position, int relative, double minVelocity, doub
     setIntegerParam(ctrl_->motorStatusDone_,1);
 
     ctrl_->wakeupPoller();
-    return asynSuccess;
+    return status;
+
 }
+
+
+void pcsAxis::setupSensorExitConditions() {
+
+
+    absoluteMoveSequencer.setElement("/sequencer_prog/clear[1]/ndrag",primaryFeedbackString);
+    absoluteMoveSequencer.setElement("/sequencer_prog/clear[3]/ndrag",primaryFeedbackString);
+    absoluteMoveSequencer.setElement("/sequencer_prog/clear[5]/ndrag",primaryFeedbackString);
+
+    sprintf(minTrigger,"TRIG_MIN_PHY(%d)",primaryFeedback);
+    absoluteMoveSequencer.setElement("/sequencer_prog/trigger_set[1]/name",minTrigger);
+    absoluteMoveSequencer.setElement("/sequencer_prog/trigger_set[1]/value",minSensorVal_);
+    absoluteMoveSequencer.setElement("/sequencer_prog/trigger_set[2]/name",minTrigger);
+    absoluteMoveSequencer.setElement("/sequencer_prog/trigger_set[2]/value",minSensorVal_);
+    absoluteMoveSequencer.setElement("/sequencer_prog/trigger_set[3]/name",minTrigger);
+    absoluteMoveSequencer.setElement("/sequencer_prog/trigger_set[3]/value",minSensorVal_);
+
+
+    absoluteMoveSequencer.setElement("/sequencer_prog/clear[4]/triggers",minTrigger);
+    absoluteMoveSequencer.setElement("/sequencer_prog/wait[2]/triggers",minTrigger);
+    absoluteMoveSequencer.setElement("/sequencer_prog/clear[6]/triggers",minTrigger);
+    absoluteMoveSequencer.setElement("/sequencer_prog/wait[3]/triggers",minTrigger);
+
+    sprintf(allTriggers,"TRIG_SYNTH_R;TRIG_MIN_PHY(%d)",primaryFeedback);
+    absoluteMoveSequencer.setElement("/sequencer_prog/clear[2]/triggers",allTriggers);
+    absoluteMoveSequencer.setElement("/sequencer_prog/wait[1]/triggers",allTriggers);
+
+}
+
 asynStatus pcsAxis::moveVelocity(double minVelocity,double maxVelocity, double acceleration){
     printf("pcsAxis::moveVelocity() called\n");
     return asynSuccess;

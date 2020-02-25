@@ -39,6 +39,7 @@ class pcsAxis : public asynMotorAxis{
     asynStatus stop(double acceleration);
     asynStatus setPosition(double position);
     asynStatus poll(bool *moving);
+    void setLoop(bool set);
 
 private:
     /* Data */
@@ -51,6 +52,12 @@ private:
     int slave_;
     int primaryFeedback, secondaryFeedback;
     char primaryFeedbackString[10],secondaryFeedbackString[10],minTrigger[48],allTriggers[96];
+
+    void setupSensorExitConditions();
+    void setSeqControlParams();
+
+    asynStatus sendSequencer(const char* functionName);
+
 
     /* Vector storing the XPATH locations all the control_set parameters (Tuning) and their values taken from asynParams
      * These values are written to in pcsController::writeFloat64() */
