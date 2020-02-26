@@ -1,0 +1,115 @@
+4 0 1
+beginScreenProperties
+major 4
+minor 0
+release 1
+x 856
+y 478
+w 185
+h 70
+font "helvetica-medium-r-14.0"
+ctlFont "courier-bold-r-14.0"
+btnFont "helvetica-medium-r-14.0"
+fgColor index 14
+bgColor index 3
+textColor index 14
+ctlFgColor1 index 25
+ctlFgColor2 index 30
+ctlBgColor1 index 5
+ctlBgColor2 index 5
+topShadowColor index 1
+botShadowColor index 11
+title "Motor box small"
+showGrid
+gridSize 5
+disableScroll
+endScreenProperties
+
+# (Group)
+object activeGroupClass
+beginObjectProperties
+major 4
+minor 0
+release 0
+x 0
+y 0
+w 183
+h 62
+
+beginGroup
+
+# (Rectangle)
+object activeRectangleClass
+beginObjectProperties
+major 4
+minor 0
+release 0
+x 0
+y 8
+w 183
+h 54
+lineColor index 14
+fillColor index 5
+endObjectProperties
+
+# (Text w. Reg. Exp.)
+object activeXRegTextClass
+beginObjectProperties
+major 4
+minor 1
+release 1
+x 5
+y 0
+w 142
+h 16
+font "helvetica-medium-r-14.0"
+fgColor index 14
+bgColor index 3
+value {
+  "$(DESC) Loop Control"
+}
+autoSize
+endObjectProperties
+
+# (Choice Button)
+object activeChoiceButtonClass
+beginObjectProperties
+major 4
+minor 0
+release 0
+x 13
+y 21
+w 115
+h 30
+fgColor index 14
+bgColor index 5
+selectColor index 5
+inconsistentColor index 5
+topShadowColor index 1
+botShadowColor index 11
+controlPv "$(P)$(M):ENABLE_LOOP"
+font "helvetica-medium-r-14.0"
+orientation "horizontal"
+endObjectProperties
+
+# (Byte)
+object ByteClass
+beginObjectProperties
+major 4
+minor 0
+release 0
+x 140
+y 21
+w 30
+h 30
+controlPv "$(P)$(M):ENABLE_LOOP_RBV"
+lineColor index 14
+onColor index 15
+offColor index 19
+numBits 1
+endObjectProperties
+
+endGroup
+
+endObjectProperties
+

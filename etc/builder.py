@@ -155,7 +155,7 @@ class pcsAxis(Device):
                             TKI=self.TKI,
                             PK=self.PK)
         if self.FEEDBACK1 != "phys14":
-            _loopSwitch(P=self.P,M=self.M,PORT=self.PORT,ADDR=self.ADDR)
+            _loopSwitch(P=self.P,M=self.M,DESC=self.DESC,PORT=self.PORT,ADDR=self.ADDR)
 
     # Once per instantiation
     def Initialise(self):

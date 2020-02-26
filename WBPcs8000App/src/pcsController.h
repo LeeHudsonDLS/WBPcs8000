@@ -185,11 +185,10 @@ protected:
 
     char outString_[MAX_CONTROLLER_STRING_SIZE];
     char inString_[MAX_CONTROLLER_STRING_SIZE];
-
+    int clearEnableLoops(const int& slaveNo, const int& axis);
 
     /* Overriding this method as we don't know what the EOS is going to be*/
     asynStatus writeReadController();
-
     template <typename T>
     asynStatus sendXmlCommand(int axisNo,const std::string& parameter,T value);
     asynStatus sendXmlCommand(int axisNo,const std::string& parameter);

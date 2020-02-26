@@ -3,12 +3,21 @@
 #% macro, M, Device suffix.
 #% macro, PORT, Asyn port.
 #% macro, ADDR, Asyn address.
+# % gui, $(P):$(M), edmembed, axis-loop-enable.edl, P=$(P),M=$(M),DESC=$(DESC)
 
 
 record(bo, "$(P)$(M):ENABLE_LOOP") {
    field(DTYP, "asynInt32")
    field(OUT,"@asyn($(PORT),$(ADDR))AXIS_ENABLE_LOOP")
-   field(ZNAM, "Disabled")
-   field(ONAM, "Enabled")
+   field(ZNAM, "Disable")
+   field(ONAM, "Enable")
    field(VAL,  "0")
 }
+
+record(bi, "$(P)$(M):ENABLE_LOOP_RBV") {
+   field(DTYP, "asynInt32")
+   field(INP,"@asyn($(PORT),$(ADDR))AXIS_ENABLE_LOOP")
+   field(ZNAM, "Disabled")
+   field(ONAM, "Enabled")
+   field(SCAN, "I/O Intr")
+}BL99I-LCH-PCS-01:A3:ENABLE_LOOP_RBV

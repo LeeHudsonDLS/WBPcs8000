@@ -119,32 +119,46 @@ void pcsAxis::setLoop(bool set) {
         absoluteMoveSequencer.setElement("/sequencer_prog/synth_set[2]/end_ampl",currentPositionScaled);
         setupSensorExitConditions();
 
-
-
         status = sendSequencer(functionName);
 
         ctrl_->wakeupPoller();
 
+        setIntegerParam(ctrl_->PCS_A_enableLoop,1);
+        callParamCallbacks();
+
+    }else{
+        stopSequencer(true);
     }
+}
+
+asynStatus pcsAxis::stopSequencer(bool clearEnableLoop) {
+    size_t nwrite,nread;
+    int eomReason;
+    char rxBuffer[1024];
+
+    rxBuffer[0]='\0';
+
+    /* If  clearEnableLoop == true, clear all enable flags including the one tied to this axis.*/
+    if(clearEnableLoop)
+        ctrl_->clearEnableLoops(slave_,-1);
+    else
+        ctrl_->clearEnableLoops(slave_,axisNo_);
+
+    return pasynOctetSyncIO->writeRead(ctrl_->pasynUserController_,ctrl_->commandConstructor.getXml(slave_,SEQ_CONTROL_PARAM,"Setup").c_str(),strlen(ctrl_->commandConstructor.getXml(slave_,SEQ_CONTROL_PARAM,"Setup").c_str()),rxBuffer,1024,0.1,&nwrite,&nread,&eomReason);
+
 }
 
 asynStatus pcsAxis::move(double position, int relative, double minVelocity, double maxVelocity, double acceleration){
 
-    size_t nwrite,nread,nact;
-    int eomReason;
     asynStatus status = asynSuccess;
     static const char *functionName = "move";
-    char seqBuffer[4096];
-    char rxBuffer[1024];
     double decelTime,decelDist,midPosition;
     printf("pcsAxis::move(%f) called\n",position);
-    rxBuffer[0]='\0';
     ctrl_->inString_[0]='\0';
     double accRate,accTime,distance,actVel,deltaDist,theta,moveVel,actualAccTime,maxVelocityScaled;
 
     // Stop the sequencer before moving
-    status = pasynOctetSyncIO->writeRead(ctrl_->pasynUserController_,ctrl_->commandConstructor.getXml(slave_,SEQ_CONTROL_PARAM,"Setup").c_str(),strlen(ctrl_->commandConstructor.getXml(slave_,SEQ_CONTROL_PARAM,"Setup").c_str()),rxBuffer,1024,0.1,&nwrite,&nread,&eomReason);
-
+    status = stopSequencer(false);
 
     absoluteMoveSequencer.setElement("//stream",primaryFeedbackString);
     absoluteMoveSequencer.setElement("//stream2",secondaryFeedbackString);
@@ -249,6 +263,7 @@ asynStatus pcsAxis::move(double position, int relative, double minVelocity, doub
 
     status = sendSequencer(functionName);
 
+    setIntegerParam(ctrl_->PCS_A_enableLoop,1);
     ctrl_->wakeupPoller();
     return status;
 }
@@ -335,15 +350,10 @@ asynStatus pcsAxis::home(double minVelocity,double maxVelocity, double accelerat
     return asynSuccess;
 }
 asynStatus pcsAxis::stop(double acceleration){
-    size_t nwrite,nread;
-    int eomReason;
     asynStatus status = asynSuccess;
-    char rxBuffer[1024];
 
-    rxBuffer[0]='\0';
-    printf ("Stop called \n");
     // Put sequencer into "Setup" state to stop it and any associated movement.
-    status = pasynOctetSyncIO->writeRead(ctrl_->pasynUserController_,ctrl_->commandConstructor.getXml(slave_,SEQ_CONTROL_PARAM,"Setup").c_str(),strlen(ctrl_->commandConstructor.getXml(slave_,SEQ_CONTROL_PARAM,"Setup").c_str()),rxBuffer,1024,0.1,&nwrite,&nread,&eomReason);
+    status = stopSequencer(true);
 
     return asynSuccess;
 }
@@ -354,21 +364,7 @@ asynStatus pcsAxis::setPosition(double position){
 
 asynStatus pcsAxis::poll(bool *moving) {
 
-    //*moving = false;
     callParamCallbacks();
-    /*
-    int motorMovingStore;
-    ctrl_->getIntegerParam(ctrl_->motorStatusMoving_,&motorMovingStore);
-    if(motorMovingStore)
-        *moving = true;
-    else
-        *moving = false;
-    */
-/*
-
-    sprintf(ctrl_->outString_,"#%dp\r",axisNo_);
-    ctrl_->writeReadController();
- */
 
     return asynSuccess;
 
@@ -377,8 +373,6 @@ asynStatus pcsAxis::poll(bool *moving) {
 pcsAxis::~pcsAxis(){
 
 }
-
-
 
 /** Axis configuration command, called directly or from iocsh.
   * \param[in] portName The name of the controller asyn port.

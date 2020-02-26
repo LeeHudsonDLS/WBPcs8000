@@ -55,7 +55,7 @@ private:
 
     void setupSensorExitConditions();
     void setSeqControlParams();
-
+    asynStatus stopSequencer(bool clearEnableLoop);
     asynStatus sendSequencer(const char* functionName);
 
 

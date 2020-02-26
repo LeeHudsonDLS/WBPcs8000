@@ -210,6 +210,19 @@ pcsAxis* pcsController::getAxis(int axisNo)
     return static_cast<pcsAxis*>(asynMotorController::getAxis(axisNo));
 }
 
+/* Clears the enable loop pv for all other axes on the slave*/
+int pcsController::clearEnableLoops(const int &slaveNo, const int& axis) {
+    pcsAxis* pAxis;
+
+    for(int i=0; i < axesPerSlave[slaveNo]; i++) {
+        if(axisNumbers[slaveNo][i] != axis) {
+            pAxis = getAxis(axisNumbers[slaveNo][i]);
+            pAxis->setIntegerParam(PCS_A_enableLoop, 0);
+        }
+
+    }
+    callParamCallbacks();
+}
 
 /*
  * Sets up asyn server and initialises the portData struct so the server can be accessed. Also registers interrupts if needed.
@@ -517,6 +530,8 @@ asynStatus pcsController::writeInt32(asynUser *pasynUser, epicsInt32 value) {
             pAxis->setLoop(1);
         else
             pAxis->setLoop(0);
+
+        return status;
     }
 
     for(int i = 0; i < MAX_SLAVES; i++){
