@@ -27,7 +27,7 @@ class pcsAxis : public asynMotorAxis{
     public:
     pcsAxis(pcsController *ctrl, int axisNo, int slave,const char* priFeedback,const char* secFeedback, double minSensorVal);
     ~pcsAxis();
-    void initialise(int axisNo);
+    void initialise();
 
     // Overridden from asynMotorAxis
     asynStatus move(double position, int relative,

@@ -25,7 +25,7 @@ pcsAxis::pcsAxis(pcsController *ctrl, int axisNo, int slave, const char* priFeed
     sprintf(primaryFeedbackString,"%s",priFeedback);
     sprintf(secondaryFeedbackString,"%s",secFeedback);
 
-    initialise(axisNo_);
+    initialise();
     moveSequencer.setElement("//slave", slave_);
     setIntegerParam(ctrl_->motorStatusMoving_, false);
     setIntegerParam(ctrl_->motorStatusDone_,1);
@@ -37,9 +37,9 @@ pcsAxis::pcsAxis(pcsController *ctrl, int axisNo, int slave, const char* priFeed
  * Basic initialisation of the given axis, remove param and use axisNo_?
  * @param axisNo
  */
-void pcsAxis::initialise(int axisNo) {
+void pcsAxis::initialise() {
     static const char *functionName = "pcsAxis::initialise";
-    printf("Axis %d created \n",axisNo);
+    printf("Axis %d created \n",axisNo_);
 
 
     /* Populate the controlSet_ vector with all the XPATH locations of the XML elements they will be writing to
@@ -69,12 +69,12 @@ void pcsAxis::initialise(int axisNo) {
      * that comes with each udp packet to determine the which sensor the packet is referring to.
      * It's not always the feedback stream number unfortunately*/
     if(primaryFeedback>=1 && primaryFeedback <=13){
-        ctrl_->registerFeedback(slave_,primaryFeedback,axisNo);
+        ctrl_->registerFeedback(slave_,primaryFeedback,axisNo_);
     }else{
-        ctrl_->registerFeedback(slave_,primaryFeedback+67,axisNo);
+        ctrl_->registerFeedback(slave_,primaryFeedback+67,axisNo_);
     }
 
-    ctrl_->registerAxisToSlave(slave_,axisNo);
+    ctrl_->registerAxisToSlave(slave_,axisNo_);
 
     /* Load XML template depending on feedback device */
     if(primaryFeedback == POSITION_SENSOR)
