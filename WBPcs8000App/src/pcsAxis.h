@@ -39,12 +39,12 @@ class pcsAxis : public asynMotorAxis{
     asynStatus stop(double acceleration);
     asynStatus setPosition(double position);
     asynStatus poll(bool *moving);
-    void setLoop(bool set);
+    void enableLoop(bool set);
 
 private:
     /* Data */
     pcsController *ctrl_;
-    Sequencer absoluteMoveSequencer;
+    Sequencer moveSequencer;
     double velocity_ ;
     double accel_;
     double minSensorVal_;
@@ -55,8 +55,8 @@ private:
 
     void setupSensorExitConditions();
     void setSeqControlParams();
-    asynStatus stopSequencer(bool clearEnableLoop);
     asynStatus sendSequencer(const char* functionName);
+    asynStatus stopSequencer(bool clearEnableLoop);
 
 
     /* Vector storing the XPATH locations all the control_set parameters (Tuning) and their values taken from asynParams

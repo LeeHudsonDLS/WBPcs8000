@@ -11,6 +11,7 @@ record(bo, "$(P)$(M):ENABLE_LOOP") {
    field(OUT,"@asyn($(PORT),$(ADDR))AXIS_ENABLE_LOOP")
    field(ZNAM, "Disable")
    field(ONAM, "Enable")
+   field(SCAN, "I/O Intr")
    field(VAL,  "0")
 }
 
@@ -20,4 +21,4 @@ record(bi, "$(P)$(M):ENABLE_LOOP_RBV") {
    field(ZNAM, "Disabled")
    field(ONAM, "Enabled")
    field(SCAN, "I/O Intr")
-}BL99I-LCH-PCS-01:A3:ENABLE_LOOP_RBV
+}

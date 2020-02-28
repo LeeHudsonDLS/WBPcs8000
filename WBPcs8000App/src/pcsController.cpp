@@ -527,9 +527,9 @@ asynStatus pcsController::writeInt32(asynUser *pasynUser, epicsInt32 value) {
 
     if(pasynUser->reason == PCS_A_enableLoop){
         if(value>0)
-            pAxis->setLoop(1);
+            pAxis->enableLoop(1);
         else
-            pAxis->setLoop(0);
+            pAxis->enableLoop(0);
 
         return status;
     }

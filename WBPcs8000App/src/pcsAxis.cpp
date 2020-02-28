@@ -9,11 +9,11 @@
 #include <epicsExport.h>
 
 pcsAxis::pcsAxis(pcsController *ctrl, int axisNo, int slave, const char* priFeedback, const char* secFeedback, double minSensorVal)
-        :asynMotorAxis((asynMotorController *) ctrl, axisNo),
-        ctrl_(ctrl),
-        slave_(slave),
-        minSensorVal_(minSensorVal),
-        absoluteMoveSequencer(){
+        : asynMotorAxis((asynMotorController *) ctrl, axisNo),
+          ctrl_(ctrl),
+          slave_(slave),
+          minSensorVal_(minSensorVal),
+          moveSequencer(){
 
     // Look into MSTA bits for enabling motors
     static const char *functionName = "pcsAxis::pcsAxis";
@@ -21,15 +21,12 @@ pcsAxis::pcsAxis(pcsController *ctrl, int axisNo, int slave, const char* priFeed
 
     scale_=ctrl_->scale;
     std::string file_path = __FILE__;
-    //Initialize non-static data members
-    velocity_ = 0.0;
-    accel_ = 0.0;
 
     sprintf(primaryFeedbackString,"%s",priFeedback);
     sprintf(secondaryFeedbackString,"%s",secFeedback);
 
     initialise(axisNo_);
-    absoluteMoveSequencer.setElement("//slave",slave_);
+    moveSequencer.setElement("//slave", slave_);
     setIntegerParam(ctrl_->motorStatusMoving_, false);
     setIntegerParam(ctrl_->motorStatusDone_,1);
     callParamCallbacks();
@@ -37,6 +34,10 @@ pcsAxis::pcsAxis(pcsController *ctrl, int axisNo, int slave, const char* priFeed
 
 }
 
+/**
+ * Basic initialisation of the given axis, remove param and use axisNo_?
+ * @param axisNo
+ */
 void pcsAxis::initialise(int axisNo) {
     static const char *functionName = "pcsAxis::initialise";
     printf("Axis %d created \n",axisNo);
@@ -61,14 +62,9 @@ void pcsAxis::initialise(int axisNo) {
     controlSet_.push_back(std::pair<std::string,int>("//tki",0));
     controlSet_.push_back(std::pair<std::string,int>("//pk",0));
 
-    // Send the xml
-    //sprintf(ctrl_->outString_, "%s",udpSetup.getXml().c_str());
-    //ctrl_->writeController();
-
     /* Extract the feedback stream numbers from the string */
     sscanf(primaryFeedbackString,"phys%d",&primaryFeedback);
     sscanf(secondaryFeedbackString,"phys%d",&secondaryFeedback);
-
 
     /* Register this axis to a feedback code. The feedback code corresponds to the code
      * that comes with each udp packet to determine the which sensor the packet is referring to.
@@ -81,21 +77,22 @@ void pcsAxis::initialise(int axisNo) {
 
     ctrl_->registerAxisToSlave(slave_,axisNo);
 
+    /* Load XML template depending on feedback device */
     if(primaryFeedback == POSITION_SENSOR)
-        absoluteMoveSequencer.loadXML(absoluteMoveTemplate);
+        moveSequencer.loadXML(moveTemplate);
     else
-        absoluteMoveSequencer.loadXML(moveWaitTemplate);
-
+        moveSequencer.loadXML(moveWaitTemplate);
 }
 
-void pcsAxis::setLoop(bool set) {
+/**
+ * Puts the axis in question into closed loop and sets the relevant
+ * asyn parameters. This is only applicable to axes where primaryFeedback != POSITION_SENSOR
+ * @param value Determines if the loop will be enabled or disabled.
+ */
+void pcsAxis::enableLoop(bool value) {
 
-    size_t nwrite,nread;
-    int eomReason;
     double currentPositionScaled;
-    char seqBuffer[4096];
-    char rxBuffer[1024];
-    static const char *functionName = "setLoop";
+    static const char *functionName = "enableLoop";
     asynStatus status;
 
     currentPositionScaled = status_.position/scale_;
@@ -103,20 +100,20 @@ void pcsAxis::setLoop(bool set) {
     if(primaryFeedback==POSITION_SENSOR)
         return;
 
-    if(set){
+    if(value){
 
         /* Set PID parameters */
         setSeqControlParams();
 
-        absoluteMoveSequencer.setElement("/sequencer_prog/synth_set[1]/acc",0);
-        absoluteMoveSequencer.setElement("/sequencer_prog/synth_set[1]/rate",0);
-        absoluteMoveSequencer.setElement("/sequencer_prog/synth_set[1]/end_rate",0);
-        absoluteMoveSequencer.setElement("/sequencer_prog/synth_set[1]/end_ampl",currentPositionScaled);
+        moveSequencer.setElement("/sequencer_prog/synth_set[1]/acc", 0);
+        moveSequencer.setElement("/sequencer_prog/synth_set[1]/rate", 0);
+        moveSequencer.setElement("/sequencer_prog/synth_set[1]/end_rate", 0);
+        moveSequencer.setElement("/sequencer_prog/synth_set[1]/end_ampl", currentPositionScaled);
 
-        absoluteMoveSequencer.setElement("/sequencer_prog/synth_set[2]/acc",0);
-        absoluteMoveSequencer.setElement("/sequencer_prog/synth_set[2]/rate",0);
-        absoluteMoveSequencer.setElement("/sequencer_prog/synth_set[2]/end_rate",0);
-        absoluteMoveSequencer.setElement("/sequencer_prog/synth_set[2]/end_ampl",currentPositionScaled);
+        moveSequencer.setElement("/sequencer_prog/synth_set[2]/acc", 0);
+        moveSequencer.setElement("/sequencer_prog/synth_set[2]/rate", 0);
+        moveSequencer.setElement("/sequencer_prog/synth_set[2]/end_rate", 0);
+        moveSequencer.setElement("/sequencer_prog/synth_set[2]/end_ampl", currentPositionScaled);
         setupSensorExitConditions();
 
         status = sendSequencer(functionName);
@@ -131,6 +128,13 @@ void pcsAxis::setLoop(bool set) {
     }
 }
 
+/**
+ * Stops whatever sequencer is currently running on this slave
+ * @param[in] clearEnableLoop Bool parameter that determines if the
+ * enableLoop flag is cleared for this all axes or just the other
+ * axes. True = clear all, False = only clear other axes
+ * @return asynStatus
+ * */
 asynStatus pcsAxis::stopSequencer(bool clearEnableLoop) {
     size_t nwrite,nread;
     int eomReason;
@@ -148,6 +152,16 @@ asynStatus pcsAxis::stopSequencer(bool clearEnableLoop) {
 
 }
 
+/**
+ * Move the motor to an absolute location or by a relative amount.
+ * @param position  The absolute position to move to (if relative=0) or the relative distance to move
+ * by (if relative=1). Units=steps.
+ * @param relative  Flag indicating relative move (1) or absolute move (0).
+ * @param minVelocity The initial velocity, often called the base velocity. Units=steps/sec.
+ * @param maxVelocity The maximum velocity, often called the slew velocity. Units=steps/sec.
+ * @param acceleration The acceleration value. Units=steps/sec/sec.
+ * @return asynStatus as a result of the asyn operation
+ * */
 asynStatus pcsAxis::move(double position, int relative, double minVelocity, double maxVelocity, double acceleration){
 
     asynStatus status = asynSuccess;
@@ -157,15 +171,14 @@ asynStatus pcsAxis::move(double position, int relative, double minVelocity, doub
     ctrl_->inString_[0]='\0';
     double accRate,accTime,distance,actVel,deltaDist,theta,moveVel,actualAccTime,maxVelocityScaled;
 
-    // Stop the sequencer before moving
+    // Stop the sequencer before moving, don't clear the loop enabled flag for this axis
     status = stopSequencer(false);
 
-    absoluteMoveSequencer.setElement("//stream",primaryFeedbackString);
-    absoluteMoveSequencer.setElement("//stream2",secondaryFeedbackString);
+    moveSequencer.setElement("//stream", primaryFeedbackString);
+    moveSequencer.setElement("//stream2", secondaryFeedbackString);
 
     /* Set PID parameters */
     setSeqControlParams();
-
 
     /* Max velocity in EGUs*/
     maxVelocityScaled=maxVelocity/scale_;
@@ -235,10 +248,10 @@ asynStatus pcsAxis::move(double position, int relative, double minVelocity, doub
      * /
      *
      */
-    absoluteMoveSequencer.setElement("/sequencer_prog/synth_set[1]/acc",acceleration/scale_);
-    absoluteMoveSequencer.setElement("/sequencer_prog/synth_set[1]/rate",0);
-    absoluteMoveSequencer.setElement("/sequencer_prog/synth_set[1]/end_rate",moveVel);
-    absoluteMoveSequencer.setElement("/sequencer_prog/synth_set[1]/end_ampl",midPosition);
+    moveSequencer.setElement("/sequencer_prog/synth_set[1]/acc", acceleration / scale_);
+    moveSequencer.setElement("/sequencer_prog/synth_set[1]/rate", 0);
+    moveSequencer.setElement("/sequencer_prog/synth_set[1]/end_rate", moveVel);
+    moveSequencer.setElement("/sequencer_prog/synth_set[1]/end_ampl", midPosition);
 
 
     /*
@@ -249,10 +262,10 @@ asynStatus pcsAxis::move(double position, int relative, double minVelocity, doub
      *       \
      *        \
      */
-    absoluteMoveSequencer.setElement("/sequencer_prog/synth_set[2]/acc",acceleration/scale_);
-    absoluteMoveSequencer.setElement("/sequencer_prog/synth_set[2]/rate",moveVel);
-    absoluteMoveSequencer.setElement("/sequencer_prog/synth_set[2]/end_rate",0.001);
-    absoluteMoveSequencer.setElement("/sequencer_prog/synth_set[2]/end_ampl",position/scale_);
+    moveSequencer.setElement("/sequencer_prog/synth_set[2]/acc", acceleration / scale_);
+    moveSequencer.setElement("/sequencer_prog/synth_set[2]/rate", moveVel);
+    moveSequencer.setElement("/sequencer_prog/synth_set[2]/end_rate", 0.001);
+    moveSequencer.setElement("/sequencer_prog/synth_set[2]/end_ampl", position / scale_);
 
 
     /* If the primary feedback device is anything other than position we will need to add
@@ -268,91 +281,95 @@ asynStatus pcsAxis::move(double position, int relative, double minVelocity, doub
     return status;
 }
 
+
+/**
+ * Configures the parameters relating to the control loop of an axis by setting the relevant XML
+ * elements of the moveSequencer object
+ */
 void pcsAxis::setSeqControlParams() {
 
     std::vector<std::pair<std::string,double> >::iterator pidIterator = controlSet_.begin();
     while(pidIterator!=controlSet_.end()){
-        absoluteMoveSequencer.setElement(pidIterator->first.c_str(),pidIterator->second);
+        moveSequencer.setElement(pidIterator->first.c_str(), pidIterator->second);
         pidIterator++;
     }
 }
 
+/**
+ * Sends the sequencer that is currently stored in the moveSequencer object
+ * This method also stops whatever sequencer is currently running and clears
+ * the loop enabled flag for all other axes but not this one as it's about to
+ * enable the loop anyway.
+ * @param functionName The name of the original function for trace purposes
+ * @return asynStatus as a result of the asyn operation
+ */
 asynStatus pcsAxis::sendSequencer(const char* functionName) {
 
-    size_t nwrite,nread,nact;
-    int eomReason;
-    char seqBuffer[4096];
-    char rxBuffer[1024];
+    /* Stop whatever sequencer is currently running on the given slave */
+    stopSequencer(false);
 
-    // Get the completed sequncer in XML form
-    sprintf(seqBuffer,absoluteMoveSequencer.getXml().c_str());
-    printf("%s\n",seqBuffer);
-    status = pasynOctetSyncIO->writeRead(ctrl_->pasynUserController_,ctrl_->commandConstructor.getXml(slave_,SEQ_CONTROL_PARAM,"Setup").c_str(),strlen(ctrl_->commandConstructor.getXml(slave_,SEQ_CONTROL_PARAM,"Setup").c_str()),rxBuffer,1024,0.1,&nwrite,&nread,&eomReason);
-
-    // Send the sequencer to the controller
-    sprintf(ctrl_->outString_,seqBuffer);
+    /* Send the sequencer to the controller */
+    sprintf(ctrl_->outString_, moveSequencer.getXml().c_str());
     status = ctrl_->writeReadController();
 
-    /* Update asyn param to allow what's sequencer is loaded to be visible */
+    /* Update asyn param to allow what sequencer is loaded to be visible*/
     ctrl_->lock();
-    ctrl_->setStringParam(ctrl_->PCS_C_XmlSequencer[slave_],seqBuffer);
+    ctrl_->setStringParam(ctrl_->PCS_C_XmlSequencer[slave_],ctrl_->outString_);
     ctrl_->setIntegerParam(ctrl_->PCS_C_UserXmlLoaded[slave_], 0);
     ctrl_->unlock();
     ctrl_->callParamCallbacks();
 
-    // Send the command to start the sequencer
+    /* Send the command to start the sequencer */
     sprintf(ctrl_->outString_,ctrl_->commandConstructor.getXml(slave_,SEQ_CONTROL_PARAM,"Program").c_str());
     status = ctrl_->writeReadController();
-
 
     asynPrint(ctrl_->pasynUserSelf, ASYN_TRACE_FLOW, "%s\n", functionName);
     setIntegerParam(ctrl_->motorStatusDone_,1);
 
     ctrl_->wakeupPoller();
     return status;
-
 }
 
-
+/**
+ * Sets the moveSequencer object up in such a way that the sequencer to be sent will
+ * remain in a running state until the minSensorVal is passed. This is only ever called for axes
+ * that don't use the position sensor as feedback as position loops are enabled by default.
+ */
 void pcsAxis::setupSensorExitConditions() {
 
-
-    absoluteMoveSequencer.setElement("/sequencer_prog/clear[1]/ndrag",primaryFeedbackString);
-    absoluteMoveSequencer.setElement("/sequencer_prog/clear[3]/ndrag",primaryFeedbackString);
-    absoluteMoveSequencer.setElement("/sequencer_prog/clear[5]/ndrag",primaryFeedbackString);
+    moveSequencer.setElement("/sequencer_prog/clear[1]/ndrag", primaryFeedbackString);
+    moveSequencer.setElement("/sequencer_prog/clear[3]/ndrag", primaryFeedbackString);
+    moveSequencer.setElement("/sequencer_prog/clear[5]/ndrag", primaryFeedbackString);
 
     sprintf(minTrigger,"TRIG_MIN_PHY(%d)",primaryFeedback);
-    absoluteMoveSequencer.setElement("/sequencer_prog/trigger_set[1]/name",minTrigger);
-    absoluteMoveSequencer.setElement("/sequencer_prog/trigger_set[1]/value",minSensorVal_);
-    absoluteMoveSequencer.setElement("/sequencer_prog/trigger_set[2]/name",minTrigger);
-    absoluteMoveSequencer.setElement("/sequencer_prog/trigger_set[2]/value",minSensorVal_);
-    absoluteMoveSequencer.setElement("/sequencer_prog/trigger_set[3]/name",minTrigger);
-    absoluteMoveSequencer.setElement("/sequencer_prog/trigger_set[3]/value",minSensorVal_);
+    moveSequencer.setElement("/sequencer_prog/trigger_set[1]/name", minTrigger);
+    moveSequencer.setElement("/sequencer_prog/trigger_set[1]/value", minSensorVal_);
+    moveSequencer.setElement("/sequencer_prog/trigger_set[2]/name", minTrigger);
+    moveSequencer.setElement("/sequencer_prog/trigger_set[2]/value", minSensorVal_);
+    moveSequencer.setElement("/sequencer_prog/trigger_set[3]/name", minTrigger);
+    moveSequencer.setElement("/sequencer_prog/trigger_set[3]/value", minSensorVal_);
 
-
-    absoluteMoveSequencer.setElement("/sequencer_prog/clear[4]/triggers",minTrigger);
-    absoluteMoveSequencer.setElement("/sequencer_prog/wait[2]/triggers",minTrigger);
-    absoluteMoveSequencer.setElement("/sequencer_prog/clear[6]/triggers",minTrigger);
-    absoluteMoveSequencer.setElement("/sequencer_prog/wait[3]/triggers",minTrigger);
+    moveSequencer.setElement("/sequencer_prog/clear[4]/triggers", minTrigger);
+    moveSequencer.setElement("/sequencer_prog/wait[2]/triggers", minTrigger);
+    moveSequencer.setElement("/sequencer_prog/clear[6]/triggers", minTrigger);
+    moveSequencer.setElement("/sequencer_prog/wait[3]/triggers", minTrigger);
 
     sprintf(allTriggers,"TRIG_SYNTH_R;TRIG_MIN_PHY(%d)",primaryFeedback);
-    absoluteMoveSequencer.setElement("/sequencer_prog/clear[2]/triggers",allTriggers);
-    absoluteMoveSequencer.setElement("/sequencer_prog/wait[1]/triggers",allTriggers);
-
+    moveSequencer.setElement("/sequencer_prog/clear[2]/triggers", allTriggers);
+    moveSequencer.setElement("/sequencer_prog/wait[1]/triggers", allTriggers);
 }
 
 asynStatus pcsAxis::moveVelocity(double minVelocity,double maxVelocity, double acceleration){
-    printf("pcsAxis::moveVelocity() called\n");
     return asynSuccess;
 }
 asynStatus pcsAxis::home(double minVelocity,double maxVelocity, double acceleration, int forwards){
-    printf("pcsAxis::home() called\n");
     return asynSuccess;
 }
 asynStatus pcsAxis::stop(double acceleration){
     asynStatus status = asynSuccess;
 
     // Put sequencer into "Setup" state to stop it and any associated movement.
+    /* Stop the sequencer and clear the loop enabled flag */
     status = stopSequencer(true);
 
     return asynSuccess;
@@ -365,9 +382,7 @@ asynStatus pcsAxis::setPosition(double position){
 asynStatus pcsAxis::poll(bool *moving) {
 
     callParamCallbacks();
-
     return asynSuccess;
-
 }
 
 pcsAxis::~pcsAxis(){
