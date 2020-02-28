@@ -20,7 +20,6 @@ pcsAxis::pcsAxis(pcsController *ctrl, int axisNo, int slave, const char* priFeed
     asynPrint(ctrl_->pasynUserSelf, ASYN_TRACE_FLOW, "%s\r",functionName);
 
     scale_=ctrl_->scale;
-    std::string file_path = __FILE__;
 
     sprintf(primaryFeedbackString,"%s",priFeedback);
     sprintf(secondaryFeedbackString,"%s",secFeedback);
@@ -290,11 +289,6 @@ void pcsAxis::enableLoop(bool value) {
  * @return asynStatus
  * */
 asynStatus pcsAxis::stopSequencer(bool clearEnableLoop) {
-    size_t nwrite,nread;
-    int eomReason;
-    char rxBuffer[1024];
-
-    rxBuffer[0]='\0';
 
     /* If  clearEnableLoop == true, clear all enable flags including the one tied to this axis.*/
     if(clearEnableLoop)
@@ -302,8 +296,8 @@ asynStatus pcsAxis::stopSequencer(bool clearEnableLoop) {
     else
         ctrl_->clearEnableLoops(slave_,axisNo_);
 
-    return pasynOctetSyncIO->writeRead(ctrl_->pasynUserController_,ctrl_->commandConstructor.getXml(slave_,SEQ_CONTROL_PARAM,"Setup").c_str(),strlen(ctrl_->commandConstructor.getXml(slave_,SEQ_CONTROL_PARAM,"Setup").c_str()),rxBuffer,1024,0.1,&nwrite,&nread,&eomReason);
-
+    sprintf(ctrl_->outString_,ctrl_->commandConstructor.getXml(slave_,SEQ_CONTROL_PARAM,"Setup").c_str());
+    return ctrl_->writeReadController();
 }
 
 /**

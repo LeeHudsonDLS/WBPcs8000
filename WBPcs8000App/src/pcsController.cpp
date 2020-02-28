@@ -80,10 +80,6 @@ pcsController::pcsController(const char *portName, int lowLevelPortAddress, int 
 
     driverName = "pcsController";
 
-    /*Supress libxml2 error messages*/
-    //xmlGenericErrorFunc handler = (xmlGenericErrorFunc)NULL;
-    //initGenericErrorDefaultFunc(&handler);
-
     //Add portname suffix
     lowLevelPortName = (char*)malloc(strlen(portName)+strlen(MAIN_PORT_SUFFIX)+1);
     streamPortName = (char*)malloc(strlen(portName)+strlen(STREAMS_PORT_SUFFIX)+1);
