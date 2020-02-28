@@ -31,7 +31,6 @@ pcsAxis::pcsAxis(pcsController *ctrl, int axisNo, int slave, const char* priFeed
     setIntegerParam(ctrl_->motorStatusDone_,1);
     callParamCallbacks();
     ctrl_->axesInitialised++;
-
 }
 
 /**
@@ -82,74 +81,6 @@ void pcsAxis::initialise(int axisNo) {
         moveSequencer.loadXML(moveTemplate);
     else
         moveSequencer.loadXML(moveWaitTemplate);
-}
-
-/**
- * Puts the axis in question into closed loop and sets the relevant
- * asyn parameters. This is only applicable to axes where primaryFeedback != POSITION_SENSOR
- * @param value Determines if the loop will be enabled or disabled.
- */
-void pcsAxis::enableLoop(bool value) {
-
-    double currentPositionScaled;
-    static const char *functionName = "enableLoop";
-    asynStatus status;
-
-    currentPositionScaled = status_.position/scale_;
-
-    if(primaryFeedback==POSITION_SENSOR)
-        return;
-
-    if(value){
-
-        /* Set PID parameters */
-        setSeqControlParams();
-
-        moveSequencer.setElement("/sequencer_prog/synth_set[1]/acc", 0);
-        moveSequencer.setElement("/sequencer_prog/synth_set[1]/rate", 0);
-        moveSequencer.setElement("/sequencer_prog/synth_set[1]/end_rate", 0);
-        moveSequencer.setElement("/sequencer_prog/synth_set[1]/end_ampl", currentPositionScaled);
-
-        moveSequencer.setElement("/sequencer_prog/synth_set[2]/acc", 0);
-        moveSequencer.setElement("/sequencer_prog/synth_set[2]/rate", 0);
-        moveSequencer.setElement("/sequencer_prog/synth_set[2]/end_rate", 0);
-        moveSequencer.setElement("/sequencer_prog/synth_set[2]/end_ampl", currentPositionScaled);
-        setupSensorExitConditions();
-
-        status = sendSequencer(functionName);
-
-        ctrl_->wakeupPoller();
-
-        setIntegerParam(ctrl_->PCS_A_enableLoop,1);
-        callParamCallbacks();
-
-    }else{
-        stopSequencer(true);
-    }
-}
-
-/**
- * Stops whatever sequencer is currently running on this slave
- * @param[in] clearEnableLoop Bool parameter that determines if the
- * enableLoop flag is cleared for this all axes or just the other
- * axes. True = clear all, False = only clear other axes
- * @return asynStatus
- * */
-asynStatus pcsAxis::stopSequencer(bool clearEnableLoop) {
-    size_t nwrite,nread;
-    int eomReason;
-    char rxBuffer[1024];
-
-    rxBuffer[0]='\0';
-
-    /* If  clearEnableLoop == true, clear all enable flags including the one tied to this axis.*/
-    if(clearEnableLoop)
-        ctrl_->clearEnableLoops(slave_,-1);
-    else
-        ctrl_->clearEnableLoops(slave_,axisNo_);
-
-    return pasynOctetSyncIO->writeRead(ctrl_->pasynUserController_,ctrl_->commandConstructor.getXml(slave_,SEQ_CONTROL_PARAM,"Setup").c_str(),strlen(ctrl_->commandConstructor.getXml(slave_,SEQ_CONTROL_PARAM,"Setup").c_str()),rxBuffer,1024,0.1,&nwrite,&nread,&eomReason);
-
 }
 
 /**
@@ -281,6 +212,99 @@ asynStatus pcsAxis::move(double position, int relative, double minVelocity, doub
     return status;
 }
 
+/**
+ * Stop the motor
+ * @param acceleration
+ * @return
+ */
+asynStatus pcsAxis::stop(double acceleration){
+    asynStatus status = asynSuccess;
+
+    // Put sequencer into "Setup" state to stop it and any associated movement.
+    /* Stop the sequencer and clear the loop enabled flag */
+    status = stopSequencer(true);
+
+    return asynSuccess;
+}
+
+/**
+ * Poll
+ * @param moving
+ * @return
+ */
+asynStatus pcsAxis::poll(bool *moving) {
+
+    callParamCallbacks();
+    return asynSuccess;
+}
+
+/**
+ * Puts the axis in question into closed loop and sets the relevant
+ * asyn parameters. This is only applicable to axes where primaryFeedback != POSITION_SENSOR
+ * @param value Determines if the loop will be enabled or disabled.
+ */
+void pcsAxis::enableLoop(bool value) {
+
+    double currentPositionScaled;
+    static const char *functionName = "enableLoop";
+    asynStatus status;
+
+    currentPositionScaled = status_.position/scale_;
+
+    if(primaryFeedback==POSITION_SENSOR)
+        return;
+
+    if(value){
+
+        /* Set PID parameters */
+        setSeqControlParams();
+
+        moveSequencer.setElement("/sequencer_prog/synth_set[1]/acc", 0);
+        moveSequencer.setElement("/sequencer_prog/synth_set[1]/rate", 0);
+        moveSequencer.setElement("/sequencer_prog/synth_set[1]/end_rate", 0);
+        moveSequencer.setElement("/sequencer_prog/synth_set[1]/end_ampl", currentPositionScaled);
+
+        moveSequencer.setElement("/sequencer_prog/synth_set[2]/acc", 0);
+        moveSequencer.setElement("/sequencer_prog/synth_set[2]/rate", 0);
+        moveSequencer.setElement("/sequencer_prog/synth_set[2]/end_rate", 0);
+        moveSequencer.setElement("/sequencer_prog/synth_set[2]/end_ampl", currentPositionScaled);
+        setupSensorExitConditions();
+
+        status = sendSequencer(functionName);
+
+        ctrl_->wakeupPoller();
+
+        setIntegerParam(ctrl_->PCS_A_enableLoop,1);
+        callParamCallbacks();
+
+    }else{
+        stopSequencer(true);
+    }
+}
+
+/**
+ * Stops whatever sequencer is currently running on this slave
+ * @param[in] clearEnableLoop Bool parameter that determines if the
+ * enableLoop flag is cleared for this all axes or just the other
+ * axes. True = clear all, False = only clear other axes
+ * @return asynStatus
+ * */
+asynStatus pcsAxis::stopSequencer(bool clearEnableLoop) {
+    size_t nwrite,nread;
+    int eomReason;
+    char rxBuffer[1024];
+
+    rxBuffer[0]='\0';
+
+    /* If  clearEnableLoop == true, clear all enable flags including the one tied to this axis.*/
+    if(clearEnableLoop)
+        ctrl_->clearEnableLoops(slave_,-1);
+    else
+        ctrl_->clearEnableLoops(slave_,axisNo_);
+
+    return pasynOctetSyncIO->writeRead(ctrl_->pasynUserController_,ctrl_->commandConstructor.getXml(slave_,SEQ_CONTROL_PARAM,"Setup").c_str(),strlen(ctrl_->commandConstructor.getXml(slave_,SEQ_CONTROL_PARAM,"Setup").c_str()),rxBuffer,1024,0.1,&nwrite,&nread,&eomReason);
+
+}
 
 /**
  * Configures the parameters relating to the control loop of an axis by setting the relevant XML
@@ -359,31 +383,6 @@ void pcsAxis::setupSensorExitConditions() {
     moveSequencer.setElement("/sequencer_prog/wait[1]/triggers", allTriggers);
 }
 
-asynStatus pcsAxis::moveVelocity(double minVelocity,double maxVelocity, double acceleration){
-    return asynSuccess;
-}
-asynStatus pcsAxis::home(double minVelocity,double maxVelocity, double acceleration, int forwards){
-    return asynSuccess;
-}
-asynStatus pcsAxis::stop(double acceleration){
-    asynStatus status = asynSuccess;
-
-    // Put sequencer into "Setup" state to stop it and any associated movement.
-    /* Stop the sequencer and clear the loop enabled flag */
-    status = stopSequencer(true);
-
-    return asynSuccess;
-}
-asynStatus pcsAxis::setPosition(double position){
-    printf("pcsAxis::setPosition() called\n");
-    return asynSuccess;
-}
-
-asynStatus pcsAxis::poll(bool *moving) {
-
-    callParamCallbacks();
-    return asynSuccess;
-}
 
 pcsAxis::~pcsAxis(){
 

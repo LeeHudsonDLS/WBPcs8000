@@ -13,7 +13,6 @@ class pcsController;
 class XmlCommandConstructor{
 public:
     void addInputParameter(const std::string& parameter, const std::string& csvCommand,int input);
-    void addInputParameter(const std::string& parameter, const std::string& csvCommand);
     std::string getInputXml(int slave, const std::string& parameter);
 
     void addParameter(const std::string& parameter, const std::string& csvCommand);

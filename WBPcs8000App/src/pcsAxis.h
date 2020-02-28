@@ -32,12 +32,7 @@ class pcsAxis : public asynMotorAxis{
     // Overridden from asynMotorAxis
     asynStatus move(double position, int relative,
             double minVelocity, double maxVelocity, double acceleration);
-    asynStatus moveVelocity(double minVelocity,
-            double maxVelocity, double acceleration);
-    asynStatus home(double minVelocity,
-            double maxVelocity, double acceleration, int forwards);
     asynStatus stop(double acceleration);
-    asynStatus setPosition(double position);
     asynStatus poll(bool *moving);
     void enableLoop(bool set);
 
@@ -45,12 +40,12 @@ private:
     /* Data */
     pcsController *ctrl_;
     Sequencer moveSequencer;
-    double velocity_ ;
-    double accel_;
     double minSensorVal_;
-    int scale_;
-    int slave_;
+    int scale_,slave_;
     int primaryFeedback, secondaryFeedback;
+    asynStatus status;
+
+    /* Some C strings used to set up sequencer */
     char primaryFeedbackString[10],secondaryFeedbackString[10],minTrigger[48],allTriggers[96];
 
     void setupSensorExitConditions();
@@ -64,7 +59,6 @@ private:
     std::vector<std::pair<std::string,double> > controlSet_;
 
     friend class pcsController;
-    asynStatus status;
 };
 
 #endif //PCSAXIS_H

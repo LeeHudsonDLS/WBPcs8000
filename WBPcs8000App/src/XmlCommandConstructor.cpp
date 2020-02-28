@@ -68,17 +68,6 @@ void XmlCommandConstructor::addInputParameter(const std::string &parameter, cons
 }
 
 /**
- * Adds an input parameter to the inputMap in xml form with the slave element. This version doesn't insert a value
- * as often the input comes from an XML element
- * @param parameter A key so the XML string can be retrieved from the inputMap Map container
- * @param csvCommand A comma delimited string representation of the desired XML
- */
-void XmlCommandConstructor::addInputParameter(const std::string &parameter, const std::string &csvCommand) {
-
-    inputMap.insert(std::pair<std::string,std::string >(parameter,addXML(csvCommand,"")));
-}
-
-/**
  * Looks up the parameter in the inputMap Map container and returns the xml string
  * @param slave Slave number to append to xml
  * @param parameter Key for the parameter
