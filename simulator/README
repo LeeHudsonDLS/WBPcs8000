@@ -1,0 +1,3 @@
+communicationSimulator.py is a simulator to simulate a chain of pcs8000 controllers. The idea is this can be used to test the main driver against.
+
+pythonIOCSim/ contains a script to talk to 2 pcs8000 controllers. This was originally used to understand the pcs8000 communiation protocol. This script is also useful for developing the controller simulator as it's much more light weight and portable than an IOC. 
