@@ -1,0 +1,6 @@
+{
+    "python.pythonPath": "/home/lee/.local/share/virtualenvs/WBPcs8000-soLTh2Wr/bin/python",
+    "python.linting.pylintEnabled": false,
+    "python.linting.flake8Enabled": true,
+    "python.linting.enabled": true
+}
